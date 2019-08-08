@@ -1,0 +1,591 @@
+#include "silinterpreter.hpp"
+
+// Identifier class
+sil::Identifier::Identifier() {
+	surface = "";
+	def = Definition::undefined;
+	type = "undefined";
+	scope = 0;
+	infix = false;
+	v.v_int = 0;
+	v.v_double = 0.0;
+	v.v_string = "";
+	v.callPtr = nullptr;
+}
+sil::Identifier::Identifier(std::string str) : sil::Identifier::Identifier() {
+	try {
+		double val = std::stod(str);
+		def = Definition::constant;
+		type = "double";
+		v.v_double = val;
+		if ((double)val == (int)val) {
+			type = "int";
+			v.v_int = (int)val;
+		}
+	} catch (...) {
+		surface = str;
+	}
+}
+sil::Identifier::operator Expression() {
+	return Expression(this);
+}
+sil::Identifier& sil::Identifier::setSurface(std::string v) { surface = v; return *this; }
+sil::Identifier& sil::Identifier::setDef(Definition v) { def = v; return *this; }
+sil::Identifier& sil::Identifier::setType(std::string v) { type = v; return *this; }
+sil::Identifier& sil::Identifier::setType(Identifier v) {
+	if (!v.isType()) throw InterpreterException("");
+	return setType(v.getSurface());
+}
+sil::Identifier& sil::Identifier::setScope(int v) { scope = v; return *this; }
+sil::Identifier& sil::Identifier::setInfix(bool v) { infix = v; return *this; }
+std::string sil::Identifier::getSurface() { return surface; }
+sil::Identifier::Definition sil::Identifier::getDef() { return def; }
+std::string sil::Identifier::getType() { return type; }
+int sil::Identifier::getScope() { return scope; }
+bool sil::Identifier::isInfix() { return infix; }
+bool sil::Identifier::isFunction() { return (def == Definition::function); }
+bool sil::Identifier::isVariable() { return (def == Definition::variable); }
+bool sil::Identifier::isConstant() { return (def == Definition::constant); }
+bool sil::Identifier::isType() { return (def == Definition::typeName); }
+bool sil::Identifier::isUndefined() { return (def == Definition::undefined); }
+sil::Identifier& sil::Identifier::setValue(sil::Identifier::Value val) { v = val; return *this; }
+sil::Identifier& sil::Identifier::setInt(int val) { v.v_int = val; return *this; }
+sil::Identifier& sil::Identifier::setDouble(double val) { v.v_double = val; return *this; }
+sil::Identifier& sil::Identifier::setBool(bool val) { v.v_int = val; return *this; }
+sil::Identifier& sil::Identifier::setString(std::string val) { v.v_string = val; return *this; }
+sil::Identifier& sil::Identifier::setFuncPtr(silFunc val) { v.callPtr = val; return *this; }
+sil::Identifier::Value& sil::Identifier::getValue() { return v; }
+int sil::Identifier::getInt() { return v.v_int; }
+double sil::Identifier::getDouble() { return v.v_double; }
+bool sil::Identifier::getBool() { return v.v_int; }
+std::string sil::Identifier::getString() { return v.v_string; }
+std::vector<sil::Identifier*> sil::Identifier::callFunc(Interpreter& rs, std::vector<Expression> exprs) {
+	if (v.callPtr != nullptr) return v.callPtr(rs, exprs);
+	return rs.callBuiltinFunc(exprs);
+}
+std::vector<sil::Identifier>& sil::Identifier::getArray() { return v.array; }
+sil::Identifier& sil::Identifier::getArray(int i) { return v.array[i]; }
+//std::unordered_map<std::string, sil::Identifier>& sil::Identifier::getMap() { return v.map; }
+sil::Identifier sil::Identifier::castTo(std::string to) {
+	Identifier cast;
+	cast.setDef(Identifier::Definition::constant).setType(to);
+	if (type == to) return *this;
+	else if (type == "int") {
+		if (to == "double") cast.v.v_double = (double)v.v_int;
+		else if (to == "bool") cast.v.v_int = (bool)v.v_int;
+		else if (to == "string") cast.v.v_string = std::to_string(v.v_int);
+	} else if (type == "double") {
+		if (to == "int") cast.v.v_int = (int)v.v_double;
+		else if (to == "bool") cast.v.v_int = (bool)v.v_double;
+		else if (to == "string") cast.v.v_string = std::to_string(v.v_double);
+	} else if (type == "bool") {
+		if (to == "double") cast.v.v_double = (double)v.v_int;
+		else if (to == "string") cast.v.v_string = (v.v_int) ? "true" : "false";
+	} else if (type == "string") {
+		if (to == "int") cast.v.v_int = std::stoi(v.v_string);
+		else if (to == "double") cast.v.v_double = std::stod(v.v_string);
+		else if (to == "bool") cast.v.v_int = !v.v_string.empty();
+	}
+	return cast;
+}
+
+// Expression class
+sil::Expression::Expression() {
+	ident = nullptr;
+}
+sil::Expression::Expression(Identifier* ip) {
+	ident = ip;
+}
+sil::Expression::Expression(std::vector<Expression> vexprs) {
+	exprs = vexprs;
+}
+bool sil::Expression::isIdentifier() {
+	return (ident != nullptr);
+}
+sil::Expression& sil::Expression::setIdentifier(sil::Identifier& v) {
+	ident = &v;
+	return *this;
+}
+sil::Expression& sil::Expression::setIdentifier(sil::Identifier* v) {
+	ident = v;
+	return *this;
+}
+sil::Identifier* sil::Expression::getIdentifier() {
+	return ident;
+}
+sil::Expression& sil::Expression::pushExpression(sil::Expression expr) {
+	if (ident != nullptr) {
+		exprs.push_back(Expression(ident));
+		ident = nullptr;
+	}
+	exprs.push_back(expr);
+	return *this;
+}
+std::vector<sil::Expression>& sil::Expression::getExpressions() {
+	return exprs;
+}
+std::string sil::Expression::expressionTree() {
+	return expressionTree(0);
+}
+std::string sil::Expression::expressionTree(int depth) {
+	std::string ret;
+	for (int i = 0; i < depth; i++) ret += "\t";
+	if (isIdentifier()) {
+		if (ident->isConstant()) {
+			if (ident->getType() == "string") ret += "String: ";
+			else if (ident->getType() == "int" || ident->getType() == "double") ret += "Number: ";
+			else ret += "Identifier(Constant): ";
+			ret += ident->castTo("string").getString();
+		} else {
+			ret += "Identifier: " + ident->getSurface();
+		}
+		ret += "\n";
+	} else {
+		ret += "Expression: \n";
+		for (sil::Expression e : exprs) {
+			ret += e.expressionTree(depth + 1);
+		}
+	}
+	return ret;
+}
+
+// Statement class
+sil::Statement::Statement() {
+}
+sil::Statement::Statement(Expression vexpr) {
+	expr = vexpr;
+}
+sil::Statement& sil::Statement::setExpression(Expression vexpr) {
+	expr = vexpr;
+	return *this;
+}
+sil::Statement& sil::Statement::setExpression(std::vector<Expression> vexprs) {
+	expr = Expression(vexprs);
+	return *this;
+}
+sil::Expression sil::Statement::getExpression() {
+	return expr;
+}
+sil::Statement& sil::Statement::pushStatement(Statement stmt) {
+	stmts.push_back(stmt);
+	return *this;
+}
+std::vector<sil::Statement>& sil::Statement::getStatements() {
+	return stmts;
+}
+bool sil::Statement::isBlock() {
+	return stmts.size();
+}
+std::string sil::Statement::statementTree() {
+	return statementTree(0);
+}
+std::string sil::Statement::statementTree(int depth) {
+	std::string ret;
+	for (int i = 0; i < depth; i++) ret += "\t";
+	if (isBlock()) {
+		ret += "Block: ";
+		ret += expr.expressionTree(depth + 1);
+		for (sil::Statement s : stmts) {
+			ret += s.statementTree(depth + 1);
+		}
+	} else {
+		ret += "Statement: \n";
+		ret += expr.expressionTree(depth + 1);
+	}
+	return ret;
+}
+
+
+// Interpreter class
+sil::Interpreter::Interpreter() {
+	currentTarget = "";
+	currentScope = 0;
+	validScopeDepth = 1;
+	decldIdent[""].push_back(std::unordered_map<std::string, Identifier>());
+	Identifier ident;
+	// type declaration
+	declareIdentifier(ident.setSurface("int").setDef(Identifier::Definition::typeName).setType("type"));
+	declareIdentifier(ident.setSurface("double").setDef(Identifier::Definition::typeName).setType("type"));
+	declareIdentifier(ident.setSurface("bool").setDef(Identifier::Definition::typeName).setType("type"));
+	declareIdentifier(ident.setSurface("string").setDef(Identifier::Definition::typeName).setType("type"));
+	declareIdentifier(ident.setSurface("array").setDef(Identifier::Definition::typeName).setType("type"));
+	// function declaration
+	declareIdentifier(ident.setSurface("decas").setDef(Identifier::Definition::function)
+			.setType("void").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("::").setDef(Identifier::Definition::function)
+			.setType("void").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("=").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("+").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("-").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("*").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("/").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("+=").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("-=").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("*=").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("/=").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("==").setDef(Identifier::Definition::function)
+			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("<").setDef(Identifier::Definition::function)
+			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface(">").setDef(Identifier::Definition::function)
+			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("<=").setDef(Identifier::Definition::function)
+			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface(">=").setDef(Identifier::Definition::function)
+			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("!").setDef(Identifier::Definition::function)
+			.setType("bool").setScope(0).setInfix(false).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("if").setDef(Identifier::Definition::function)
+			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("loop").setDef(Identifier::Definition::function)
+			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("{").setDef(Identifier::Definition::control)
+			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("}").setDef(Identifier::Definition::control)
+			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("print").setDef(Identifier::Definition::function)
+			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("println").setDef(Identifier::Definition::function)
+			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("!!").setDef(Identifier::Definition::function)
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("push").setDef(Identifier::Definition::function)
+			.setType("array").setScope(0).setInfix(false).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("dump").setDef(Identifier::Definition::function)
+			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+}
+
+
+sil::Statement sil::Interpreter::parse(std::string stxt) {
+	bool spaceRead = true, dquoted = false, squoted = false, escaped = false, inSqBracket = false;
+	std::string buffer;
+	std::vector<Statement> targetStmt;
+	targetStmt.push_back(Statement());
+	std::vector<Expression> targetExpr;
+	targetExpr.push_back(Expression());
+	if (stxt.back() != '\n') stxt += '\n';
+	for (unsigned long i = 0; i < stxt.size(); i++) {
+		char c = stxt[i], nc = stxt[i + 1];
+		if (c == '\n') {
+			if (dquoted || squoted)
+				throw InterpreterSyntaxException("Close quotation before new line");
+			if (!buffer.empty()) {
+				tmpIdents.push_back(Identifier(buffer));
+				targetExpr.back().pushExpression(Expression(&tmpIdents.back()));
+				buffer.clear();
+			}
+			targetStmt.back().pushStatement(targetExpr.back());
+			targetExpr.pop_back();
+			targetExpr.push_back(Expression());
+
+		} else if (dquoted) {
+			if (c == '\\') {
+				switch (nc) {
+					case  'n': buffer += '\n'; break;
+					case  'r': buffer += '\r'; break;
+					case  't': buffer += '\t'; break;
+					case '\\': buffer += '\\'; break;
+					case '\"': buffer += '\"'; break;
+					case '\'': buffer += '\''; break;
+				}
+				i++;
+			} else if (c == '\"') {
+				if (nc != ' ' && nc != '\t' && nc != '\n') {
+					throw InterpreterSyntaxException("No space after string sequence");
+				}
+				dquoted = false;
+				// buffer += c;
+				tmpIdents.push_back(
+						Identifier().setDef(Identifier::Definition::constant)
+						.setType("string").setString(buffer)
+						);
+				targetExpr.back().pushExpression(Expression(&tmpIdents.back()));
+				buffer.clear();
+			} else buffer += c;
+		} else if (squoted) {
+			if (c == '\\' && nc == '\'') {
+				buffer += '\'';
+				i++;
+			} else if (c == '\'') {
+				if (nc != ' ' && nc != '\t' && nc != '\n') {
+					throw InterpreterSyntaxException("No space after string sequence");
+				}
+				squoted = false;
+				// buffer += c;
+				tmpIdents.push_back(
+						Identifier().setDef(Identifier::Definition::constant)
+						.setType("string").setString(buffer)
+						);
+				targetExpr.back().pushExpression(Expression(&tmpIdents.back()));
+				buffer.clear();
+			} else buffer += c;
+
+		} else if (c == '(') {
+			targetExpr.push_back(Expression());
+		} else if (c == ')') {
+			targetExpr[targetExpr.size() - 2].pushExpression(targetExpr.back());
+			targetExpr.pop_back();
+
+		} else if (c == '{') {
+			// ToDo: Expression check (if / while / for)
+			targetStmt.push_back(Statement());
+			targetStmt.back().setExpression(targetExpr.back());
+			targetExpr.pop_back();
+			targetExpr.push_back(Expression());
+		} else if (c == '}') {
+			targetStmt[targetStmt.size() - 2].pushStatement(targetStmt.back());
+			targetStmt.pop_back();
+
+		} else if (c == '\\') {
+			i++;
+
+		} else if (c == ' ' || c == '\t') {
+			switch (nc) {
+				case '\"': dquoted = true; i++; break;
+				case '\'': squoted = true; i++; break;
+			}
+		} else {
+			if (nc == ' ' || nc == '\t' || nc == ')') {
+				buffer += c;
+				tmpIdents.push_back(Identifier(buffer));
+				targetExpr.back().pushExpression(Expression(&tmpIdents.back()));
+				buffer.clear();
+			} else if (c == '[') {
+				targetExpr.push_back(Expression());
+				tmpIdents.push_back(Identifier(buffer));
+				targetExpr.back().pushExpression(Expression(&tmpIdents.back()));
+				buffer.clear();
+				tmpIdents.push_back(Identifier("!!"));
+				targetExpr.back().pushExpression(Expression(&tmpIdents.back()));
+				targetExpr.push_back(Expression());
+			} else if (c == ']') {
+				if (!buffer.empty()) {
+					tmpIdents.push_back(Identifier(buffer));
+					targetExpr.back().pushExpression(Expression(&tmpIdents.back()));
+					buffer.clear();
+				}
+				targetExpr[targetExpr.size() - 2].pushExpression(targetExpr.back());
+				targetExpr.pop_back();
+				targetExpr[targetExpr.size() - 2].pushExpression(targetExpr.back());
+				targetExpr.pop_back();
+			} else {
+				buffer += c;
+			}
+		}
+	}
+	return targetStmt[0];
+}
+
+sil::Statement sil::Interpreter::parseFile(std::string path) {
+	std::ifstream sourcefile(path);
+	if (!sourcefile.is_open()) throw InterpreterException("Specified file not found");
+	std::stringstream ss;
+	ss << sourcefile.rdbuf();
+	sourcefile.close();
+	std::string source(ss.str());
+	return this->parse(source);
+}
+
+
+std::vector<sil::Identifier*> sil::Interpreter::eval(Expression expr) {
+	std::vector<Identifier*> ret;
+	if (expr.isIdentifier()) {
+		if (expr.getIdentifier()->isUndefined()) ret.push_back(identOf(expr.getIdentifier()->getSurface()));
+		else ret.push_back(expr.getIdentifier());
+		return ret;
+	}
+	std::vector<Expression> exprs = expr.getExpressions();
+	std::vector<Expression> exprStack;
+	for (int i = exprs.size() - 1; 0 <= i; i--) {
+		Identifier* ident;
+		if (exprs[i].isIdentifier() && (ident = eval(exprs[i])[0])->isFunction()) {
+			if (ident->isInfix() && exprStack.size() == 1 && 0 < i) {
+				exprStack.push_back(exprs[--i]);
+				exprStack.push_back(eval(exprs[i + 1])[0]);
+			} else {
+				exprStack.push_back(eval(exprs[i])[0]);
+			}
+			std::reverse(exprStack.begin(), exprStack.end());
+			std::vector<Identifier*> retTmp = ident->callFunc(*this, exprStack);
+			exprStack.clear();
+			for (int j = retTmp.size() - 1; 0 <= j; j--) {
+				exprStack.push_back(Expression(retTmp[j]));
+			}
+		} else {
+			exprStack.push_back(exprs[i]);
+		}
+	}
+	for (Expression tmpExpr : exprStack) {
+		if (tmpExpr.isIdentifier()) {
+			ret.push_back(tmpExpr.getIdentifier());
+		} else {
+			std::vector<Identifier*> tmpIdents = eval(tmpExpr);
+			for (int i = tmpIdents.size() - 1; 0 <= i; i--) {
+				ret.push_back(tmpIdents[i]);
+			}
+		}
+	}
+	std::reverse(ret.begin(), ret.end());
+	return ret;
+}
+std::vector<sil::Identifier*> sil::Interpreter::callFunc(std::vector<Expression> exprs) {
+	if (!exprs[0].isIdentifier()) throw InterpreterRuntimeException("Unknown error at silinterpreter.cpp:" + std::to_string(__LINE__));
+	Identifier* ident = exprs[0].getIdentifier();
+	if (!ident->isFunction()) throw InterpreterRuntimeException("Unknown error at silinterpreter.cpp:" + std::to_string(__LINE__));
+
+	return ident->callFunc(*this, exprs);
+}
+std::vector<sil::Identifier*> sil::Interpreter::callBuiltinFunc(std::vector<Expression> exprs) {
+	if (!exprs[0].isIdentifier()) throw InterpreterRuntimeException("Unknown error at silinterpreter.cpp:" + std::to_string(__LINE__));
+
+	Identifier* ident = exprs[0].getIdentifier();
+	if (!ident->isFunction()) throw InterpreterRuntimeException("Unknown error at silinterpreter.cpp:" + std::to_string(__LINE__));
+
+
+	std::vector<Identifier*> ret;
+	std::string surface = ident->getSurface();
+	if (surface == "decas" || surface == "::") {
+		std::vector<Identifier*> lv = eval(exprs[1]);
+		std::vector<Identifier*> rv = eval(exprs[2]);
+		if (rv.size() != 1) throw InterpreterRuntimeException("rvalue size != 1");
+		if (!rv[0]->isType()) throw InterpreterRuntimeException("rvalue is not type");
+		if (lv.size() < 1) throw InterpreterRuntimeException("lvalue size smaller < 1");
+		for (Identifier *ip : lv) {
+			Identifier ident = *ip;
+			ident.setDef(Identifier::Definition::variable).setType(*rv[0]).setScope(currentScope);
+			Identifier* tmpi = declareIdentifier(ident);
+			if (!tmpi) throw InterpreterRuntimeException("Redefinition not supported");
+			ret.push_back(tmpi);
+		}
+	} else if (surface == "=") {
+		std::vector<Identifier*> lv = eval(exprs[1]);
+		std::vector<Identifier*> rv = eval(exprs[2]);
+		if (lv.size() != rv.size()) throw InterpreterRuntimeException("lvalue size not equal to rvalue size");
+		for (unsigned int i = 0; i < lv.size(); i++) {
+			lv[i]->setValue(rv[i]->castTo(lv[i]->getType()).getValue());
+			ret.push_back(lv[i]);
+		}
+	} else if (surface == "print" || surface == "println") {
+		for (unsigned int i = 1; i < exprs.size(); i++) {
+			for (Identifier* tmpi : eval(exprs[i])) {
+				std::cout << tmpi->castTo("string").getString();
+			}
+		}
+		if (surface == "println") std::cout << std::endl;
+		else std::cout << std::flush;
+	} else if (surface == "!!") {
+		std::vector<Identifier*> lv = eval(exprs[1]);
+		std::vector<Identifier*> rv = eval(exprs[2]);
+		if (lv.size() != rv.size()) throw InterpreterRuntimeException("lvalue size not equal to rvalue size");
+		for (unsigned int i = 0; i < lv.size(); i++) {
+			if (lv[i]->getType() == "array") {
+				ret.push_back(&lv[i]->getArray(rv[i]->castTo("int").getInt()));
+			} else if (lv[i]->getType() == "map") {
+				//ret.push_back(&lv[i]->getMap(rv[i]->castTo("string").getString()));
+			}
+		}
+	} else if (surface == "dump") {
+		for (unsigned int i = 1; i < exprs.size(); i++) {
+			for (Identifier* tmpi : eval(exprs[i])) {
+				std::cout << "(" << tmpi->getSurface() << " :: " << tmpi->getType() <<
+					" = " << tmpi->castTo("string").getString() << ") ";
+			}
+			std::cout << std::endl;
+		}
+	}
+	return ret;
+}
+
+int sil::Interpreter::run(Statement stmt) {
+	if (stmt.isBlock()) {
+		currentScope++;
+		validScopeDepth++;
+		decldIdent[currentTarget].push_back(std::unordered_map<std::string, Identifier>());
+		for (Statement s : stmt.getStatements()) {
+			run(s);
+		}
+		currentScope--;
+		validScopeDepth--;
+		decldIdent[currentTarget].pop_back();
+	} else {
+		eval(stmt.getExpression());
+	}
+	return 0;
+}
+int sil::Interpreter::run(std::string str) {
+	run(parse(str));
+	return 0;
+}
+
+
+sil::Identifier* sil::Interpreter::declareIdentifier(Identifier ident) {
+	auto targetItr = std::next(decldIdent[currentTarget].begin(), ident.getScope());
+	if (!(*targetItr)[ident.getSurface()].isUndefined()) return nullptr;
+	return &((*targetItr)[ident.getSurface()] = ident);
+}
+sil::Identifier* sil::Interpreter::tmpIdentifier(Identifier ident) {
+	Identifier& tmpi = (*std::next(decldIdent[""].begin(), ident.getScope()))["(tmp)"];
+	if (tmpi.getType() != "array") tmpi.setType("array");
+	tmpi.getArray().push_back(ident);
+	return &tmpi.getArray().back();
+}
+bool sil::Interpreter::isIdentifierDeclared(std::string target, int scope, int scopeDepth, std::string is) {
+	auto targetItr = std::next(decldIdent[target].begin(), scope);
+	for (int i = 0; i < scopeDepth; i++, targetItr--) {
+		int j = scope - i;
+		if (targetItr->count(is)) return true;
+	}
+	return false;
+}
+bool sil::Interpreter::isIdentifierDeclared(std::string target, int scope, std::string is) {
+	return isIdentifierDeclared(target, scope, validScopeDepth, is);
+}
+bool sil::Interpreter::isIdentifierDeclared(std::string target, std::string is) {
+	return isIdentifierDeclared(target, currentScope, is);
+}
+bool sil::Interpreter::isIdentifierDeclared(std::string is) {
+	return isIdentifierDeclared(currentTarget, is);
+}
+sil::Identifier* sil::Interpreter::identOf(std::string target, int scope, int scopeDepth, std::string is) {
+	auto targetItr = std::next(decldIdent[target].begin(), scope);
+	auto currentScopeItr = targetItr;
+	for (int i = 0; i < scopeDepth; i++, targetItr--) {
+		int j = scope - i;
+		if (targetItr->count(is)) return &(*targetItr)[is];
+	}
+	return &(*currentScopeItr)[is].setSurface(is).setScope(scope);
+}
+sil::Identifier* sil::Interpreter::identOf(std::string target, int scope, std::string is) {
+	return identOf(target, scope, validScopeDepth, is);
+}
+sil::Identifier* sil::Interpreter::identOf(std::string target, std::string is) {
+	return identOf(target, currentScope, is);
+}
+sil::Identifier* sil::Interpreter::identOf(std::string is) {
+	return identOf(currentTarget, is);
+}
+
+
+sil::InterpreterException::InterpreterException(std::string msg) : std::runtime_error(msg) {
+}
+sil::InterpreterSyntaxException::InterpreterSyntaxException(std::string msg) :
+	InterpreterException("Syntax error: " + msg) {
+}
+sil::InterpreterSyntaxException::InterpreterSyntaxException(std::string msg, int line, int col) :
+	InterpreterSyntaxException("line " + std::to_string(line) + ", col " + std::to_string(col) + "\n" + msg) {
+}
+sil::InterpreterRuntimeException::InterpreterRuntimeException(std::string msg) :
+	InterpreterException("Runtime error: " + msg) {
+}
+sil::InterpreterRuntimeException::InterpreterRuntimeException(std::string msg, int line, int col) :
+	InterpreterRuntimeException("line " + std::to_string(line) + ", col " + std::to_string(col) + "\n" + msg) {
+}
