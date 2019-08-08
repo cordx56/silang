@@ -1,3 +1,3 @@
-# space-separated Simple Interpreter Language
+# SILang - Simple Interpreter Language
 
-大学の講義で作成したインタプリタを公開してほしいと言われたので。
+大学の講義で作成したインタプリタの改善・拡張版。
