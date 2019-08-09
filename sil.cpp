@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 
 			if (outputParseTree) {
 				if (htmlOutput) std::cout << "<pre class=\"silParseTree\"><code>";
-				std::cout << stmts.statementTree();
+				std::cout << stmts.statementTree(rs);
 				if (htmlOutput) std::cout << "</code></pre>";
 				std::cout << std::endl;
 			}

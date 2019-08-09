@@ -16,7 +16,8 @@ namespace sil {
 	class Expression;
 	class Statement;
 
-	typedef std::vector<Identifier*> (*silFunc)(Interpreter&, std::vector<Expression>);
+	typedef int IdentRefId;
+	typedef std::vector<IdentRefId> (*silFunc)(Interpreter&, std::vector<Expression>);
 
 	class Identifier {
 	public:
@@ -26,15 +27,16 @@ namespace sil {
 			variable,
 			constant,
 			typeName,
-			undefined
+			undefined,
+			invalid
 		};
 		struct Value {
 			int v_int;
 			double v_double;
 			std::string v_string;
 			silFunc callPtr;
-			std::vector<Identifier> array;
-			//std::unordered_map<std::string, Identifier> map;
+			std::vector<IdentRefId> array;
+			std::unordered_map<std::string, IdentRefId> map;
 		};
 
 	private:
@@ -48,8 +50,6 @@ namespace sil {
 	public:
 		Identifier();
 		Identifier(std::string);
-
-		operator Expression();
 
 		Identifier& setSurface(std::string);
 		Identifier& setDef(Definition);
@@ -67,6 +67,7 @@ namespace sil {
 		bool isConstant();
 		bool isType();
 		bool isUndefined();
+		bool isInvalid();
 
 		Identifier& setValue(Value);
 		Identifier& setInt(int);
@@ -79,11 +80,11 @@ namespace sil {
 		double getDouble();
 		bool getBool();
 		std::string getString();
-		std::vector<Identifier*> callFunc(Interpreter&, std::vector<Expression>);
-		std::vector<Identifier>& getArray();
-		std::unordered_map<std::string, Identifier>& getMap();
-		Identifier& getArray(int);
-		//Identifier& getMap(std::string);
+		std::vector<IdentRefId> callFunc(Interpreter&, std::vector<Expression>);
+		std::vector<IdentRefId>& getArray();
+		std::unordered_map<std::string, IdentRefId>& getMap();
+		IdentRefId getArray(int);
+		IdentRefId getMap(std::string);
 
 		Identifier castTo(std::string);
 
@@ -92,20 +93,20 @@ namespace sil {
 	};
 
 	class Expression {
-		Identifier* ident;
+		IdentRefId ident;
 		std::vector<Expression> exprs;
 	public:
 		Expression();
-		Expression(Identifier*);
+		Expression(IdentRefId);
 		Expression(std::vector<Expression>);
 		bool isIdentifier();
 		Expression& setIdentifier(Identifier&);
-		Expression& setIdentifier(Identifier*);
-		Identifier* getIdentifier();
+		Expression& setIdentifier(IdentRefId);
+		IdentRefId getIdentifier();
 		Expression& pushExpression(Expression);
 		std::vector<Expression>& getExpressions();
-		std::string expressionTree();
-		std::string expressionTree(int);
+		std::string expressionTree(Interpreter&);
+		std::string expressionTree(Interpreter&, int);
 	};
 
 	class Statement {
@@ -120,35 +121,47 @@ namespace sil {
 		Statement& pushStatement(Statement);
 		std::vector<Statement>& getStatements();
 		bool isBlock();
-		std::string statementTree();
-		std::string statementTree(int);
+		std::string statementTree(Interpreter&);
+		std::string statementTree(Interpreter&, int);
 	};
 
 
 	class Interpreter {
+	public:
+		class IdentifierStorage {
+		private:
+			std::vector<Identifier> idents;
+			std::vector<IdentRefId> allocStack;
+		public:
+			IdentRefId push(Identifier);
+			Identifier& get(IdentRefId);
+			Identifier& operator [](IdentRefId);
+			void destroy(IdentRefId);
+		};
 	private:
-		std::unordered_map<std::string, std::list<std::unordered_map<std::string, Identifier>>> decldIdent;
+		IdentifierStorage istore;
+		std::unordered_map<std::string, std::vector<std::unordered_map<std::string, IdentRefId>>> decldIdent;
 		std::string currentTarget;
 		int currentScope;
 		int validScopeDepth;
 		std::vector<int> validScopeDepthStack;
-		std::list<Identifier> tmpIdents;
 	public:
 		Interpreter();
-		std::vector<Identifier*> eval(Expression);
-		std::vector<Identifier*> callFunc(std::vector<Expression>);
-		std::vector<Identifier*> callBuiltinFunc(std::vector<Expression>);
+		std::vector<IdentRefId> eval(Expression);
+		std::vector<IdentRefId> callFunc(std::vector<Expression>);
+		std::vector<IdentRefId> callBuiltinFunc(std::vector<Expression>);
 
-		Identifier* declareIdentifier(Identifier);
-		Identifier* tmpIdentifier(Identifier);
+		Identifier& getIdentifier(IdentRefId);
+		IdentRefId declareIdentifier(Identifier);
+		//Identifier* tmpIdentifier(Identifier);
 		bool isIdentifierDeclared(std::string);
 		bool isIdentifierDeclared(std::string, std::string);
 		bool isIdentifierDeclared(std::string, int, std::string);
 		bool isIdentifierDeclared(std::string, int, int, std::string);
-		Identifier* identOf(std::string);
-		Identifier* identOf(std::string, std::string);
-		Identifier* identOf(std::string, int, std::string);
-		Identifier* identOf(std::string, int, int, std::string);
+		IdentRefId identOf(std::string);
+		IdentRefId identOf(std::string, std::string);
+		IdentRefId identOf(std::string, int, std::string);
+		IdentRefId identOf(std::string, int, int, std::string);
 		Interpreter& importFrom(std::string, std::string, std::vector<Identifier&>);
 
 		bool isWhitespace(char);
