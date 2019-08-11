@@ -16,7 +16,7 @@ namespace sil {
 	class Expression;
 	class Statement;
 
-	typedef int IdentRefId;
+	typedef unsigned int IdentRefId;
 	typedef std::vector<IdentRefId> (*silFunc)(Interpreter&, std::vector<Expression>);
 
 	class Identifier {
@@ -134,6 +134,7 @@ namespace sil {
 			std::vector<Identifier> idents;
 			std::vector<IdentRefId> allocStack;
 		public:
+			IdentifierStorage();
 			IdentRefId push(Identifier);
 			Identifier& get(IdentRefId);
 			Identifier& operator [](IdentRefId);

@@ -88,7 +88,7 @@ sil::Identifier sil::Identifier::castTo(std::string to) {
 
 // Expression class
 sil::Expression::Expression() {
-	ident = -1;
+	ident = 0;
 }
 sil::Expression::Expression(sil::IdentRefId ip) {
 	ident = ip;
@@ -97,7 +97,7 @@ sil::Expression::Expression(std::vector<Expression> vexprs) {
 	exprs = vexprs;
 }
 bool sil::Expression::isIdentifier() {
-	return (0 <= ident);
+	return ident;
 }
 /*
 sil::Expression& sil::Expression::setIdentifier(sil::Identifier& v) {
@@ -112,9 +112,9 @@ sil::IdentRefId sil::Expression::getIdentifier() {
 	return ident;
 }
 sil::Expression& sil::Expression::pushExpression(sil::Expression expr) {
-	if (0 <= ident) {
+	if (0 < ident) {
 		exprs.push_back(Expression(ident));
-		ident = -1;
+		ident = 0;
 	}
 	exprs.push_back(expr);
 	return *this;
@@ -197,6 +197,9 @@ std::string sil::Statement::statementTree(Interpreter& rs, int depth) {
 
 // Interpreter class
 // Identifier Storage
+sil::Interpreter::IdentifierStorage::IdentifierStorage() {
+	this->push(Identifier().setDef(Identifier::Definition::invalid));
+}
 sil::IdentRefId sil::Interpreter::IdentifierStorage::push(Identifier ident) {
 	if (allocStack.size() == 0) {
 		idents.push_back(ident);
@@ -209,14 +212,14 @@ sil::IdentRefId sil::Interpreter::IdentifierStorage::push(Identifier ident) {
 	}
 }
 sil::Identifier& sil::Interpreter::IdentifierStorage::get(IdentRefId id) {
-	if (id < 0 || idents.size() <= id || idents[id].isInvalid()) throw InterpreterException("Invalid identifier reference");
+	if (idents.size() <= id || idents[id].isInvalid()) throw InterpreterException("Invalid identifier referenced");
 	return idents[id];
 }
 sil::Identifier& sil::Interpreter::IdentifierStorage::operator [](IdentRefId id) {
 	return get(id);
 }
 void sil::Interpreter::IdentifierStorage::destroy(IdentRefId id) {
-	if (id < 0 || idents.size() <= id || idents[id].isInvalid()) throw InterpreterException("Invalid identifier reference");
+	if (idents.size() <= id || idents[id].isInvalid()) throw InterpreterException("Invalid identifier referenced");
 	idents[id].setDef(sil::Identifier::Definition::invalid);
 	allocStack.push_back(id);
 }
@@ -484,7 +487,7 @@ std::vector<sil::IdentRefId> sil::Interpreter::callBuiltinFunc(std::vector<Expre
 			Identifier ident = istore[ip];
 			ident.setDef(Identifier::Definition::variable).setType(rvi).setScope(currentScope);
 			IdentRefId tmpi = declareIdentifier(ident);
-			if (tmpi < 0) throw InterpreterRuntimeException("Redefinition not supported");
+			if (!tmpi) throw InterpreterRuntimeException("Redefinition not supported");
 			ret.push_back(tmpi);
 		}
 	} else if (surface == "=") {
@@ -517,7 +520,7 @@ std::vector<sil::IdentRefId> sil::Interpreter::callBuiltinFunc(std::vector<Expre
 	} else if (surface == "dump") {
 		for (unsigned int i = 1; i < exprs.size(); i++) {
 			for (IdentRefId tmpi : eval(exprs[i])) {
-				std::cout << "(" << istore[tmpi].getSurface() << " :: " << istore[tmpi].getType() <<
+				std::cout << "(id: " << tmpi << ", " << istore[tmpi].getSurface() << " :: " << istore[tmpi].getType() <<
 					" = " << istore[tmpi].castTo("string").getString() << ") ";
 			}
 			std::cout << std::endl;
@@ -559,7 +562,7 @@ sil::IdentRefId sil::Interpreter::declareIdentifier(Identifier ident) {
 		istore[decldIdent[currentTarget][ident.getScope()][ident.getSurface()]] = ident;
 		return decldIdent[currentTarget][ident.getScope()][ident.getSurface()];
 	} else {
-		return -1;
+		return 0;
 	}
 }
 /*
