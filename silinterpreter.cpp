@@ -85,6 +85,67 @@ sil::Identifier sil::Identifier::castTo(std::string to) {
 	}
 	return cast;
 }
+sil::Identifier sil::Identifier::operator +(Identifier& rv) {
+	Identifier ret;
+	ret.setDef(Definition::constant);
+	if (type == "string" || rv.type == "string") {
+		ret.setType("string");
+		ret.setString(this->castTo("string").getString() + rv.castTo("string").getString());
+	} else if (type == "double" || rv.type == "double") {
+		ret.setType("double");
+		ret.setDouble(this->castTo("double").getDouble() + rv.castTo("double").getDouble());
+	} else if (type == "int" || rv.type == "int") {
+		ret.setType("int");
+		ret.setInt(this->castTo("int").getInt() + rv.castTo("int").getInt());
+	}
+	return ret;
+}
+sil::Identifier sil::Identifier::operator -(Identifier& rv) {
+	Identifier ret;
+	ret.setDef(Definition::constant);
+	if (type == "double" || rv.type == "double") {
+		ret.setType("double");
+		ret.setDouble(this->castTo("double").getDouble() - rv.castTo("double").getDouble());
+	} else if (type == "int" || rv.type == "int") {
+		ret.setType("int");
+		ret.setInt(this->castTo("int").getInt() - rv.castTo("int").getInt());
+	}
+	return ret;
+}
+sil::Identifier sil::Identifier::operator *(Identifier& rv) {
+	Identifier ret;
+	ret.setDef(Definition::constant);
+	if (type == "double" || rv.type == "double") {
+		ret.setType("double");
+		ret.setDouble(this->castTo("double").getDouble() * rv.castTo("double").getDouble());
+	} else if (type == "int" || rv.type == "int") {
+		ret.setType("int");
+		ret.setInt(this->castTo("int").getInt() * rv.castTo("int").getInt());
+	}
+	return ret;
+}
+sil::Identifier sil::Identifier::operator /(Identifier& rv) {
+	Identifier ret;
+	ret.setDef(Definition::constant);
+	if (type == "double" || rv.type == "double") {
+		ret.setType("double");
+		ret.setDouble(this->castTo("double").getDouble() / rv.castTo("double").getDouble());
+	} else if (type == "int" || rv.type == "int") {
+		ret.setType("int");
+		ret.setInt(this->castTo("int").getInt() / rv.castTo("int").getInt());
+	}
+	return ret;
+}
+sil::Identifier sil::Identifier::operator &&(Identifier& rv) {
+	Identifier ret;
+	return ret.setDef(Definition::constant).setType("bool")
+		.setBool(this->castTo("bool").getBool() && rv.castTo("bool").getBool());
+}
+sil::Identifier sil::Identifier::operator ||(Identifier& rv) {
+	Identifier ret;
+	return ret.setDef(Definition::constant).setType("bool")
+		.setBool(this->castTo("bool").getBool() || rv.castTo("bool").getBool());
+}
 
 // Expression class
 sil::Expression::Expression() {
@@ -108,7 +169,7 @@ sil::Expression& sil::Expression::setIdentifier(sil::Identifier* v) {
 	ident = v;
 	return *this;
 }*/
-sil::IdentRefId sil::Expression::getIdentifier() {
+sil::IdentRefId sil::Expression::getIdentRefId() {
 	return ident;
 }
 sil::Expression& sil::Expression::pushExpression(sil::Expression expr) {
@@ -226,6 +287,9 @@ void sil::Interpreter::IdentifierStorage::destroy(IdentRefId id) {
 sil::Identifier& sil::Interpreter::getIdentifier(IdentRefId id) {
 	return istore[id];
 }
+sil::IdentRefId sil::Interpreter::pushIdentifier(Identifier ident) {
+	return istore.push(ident);
+}
 
 // Interpreter
 sil::Interpreter::Interpreter() {
@@ -248,13 +312,13 @@ sil::Interpreter::Interpreter() {
 	declareIdentifier(ident.setSurface("=").setDef(Identifier::Definition::function)
 			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("+").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identArithmetic));
 	declareIdentifier(ident.setSurface("-").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identArithmetic));
 	declareIdentifier(ident.setSurface("*").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identArithmetic));
 	declareIdentifier(ident.setSurface("/").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identArithmetic));
 	declareIdentifier(ident.setSurface("+=").setDef(Identifier::Definition::function)
 			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("-=").setDef(Identifier::Definition::function)
@@ -423,8 +487,8 @@ sil::Statement sil::Interpreter::parseFile(std::string path) {
 std::vector<sil::IdentRefId> sil::Interpreter::eval(Expression expr) {
 	std::vector<IdentRefId> ret;
 	if (expr.isIdentifier()) {
-		if (istore[expr.getIdentifier()].isUndefined()) ret.push_back(identOf(istore[expr.getIdentifier()].getSurface()));
-		else ret.push_back(expr.getIdentifier());
+		if (istore[expr.getIdentRefId()].isUndefined()) ret.push_back(identOf(istore[expr.getIdentRefId()].getSurface()));
+		else ret.push_back(expr.getIdentRefId());
 		return ret;
 	}
 	std::vector<Expression> exprs = expr.getExpressions();
@@ -450,7 +514,7 @@ std::vector<sil::IdentRefId> sil::Interpreter::eval(Expression expr) {
 	}
 	for (Expression tmpExpr : exprStack) {
 		if (tmpExpr.isIdentifier()) {
-			ret.push_back(tmpExpr.getIdentifier());
+			ret.push_back(tmpExpr.getIdentRefId());
 		} else {
 			std::vector<IdentRefId> tmpIdents = eval(tmpExpr);
 			for (int i = tmpIdents.size() - 1; 0 <= i; i--) {
@@ -463,16 +527,13 @@ std::vector<sil::IdentRefId> sil::Interpreter::eval(Expression expr) {
 }
 std::vector<sil::IdentRefId> sil::Interpreter::callFunc(std::vector<Expression> exprs) {
 	if (!exprs[0].isIdentifier()) throw InterpreterRuntimeException("Unknown error at silinterpreter.cpp:" + std::to_string(__LINE__));
-	Identifier& ident = istore[exprs[0].getIdentifier()];
+	Identifier& ident = istore[exprs[0].getIdentRefId()];
 	if (!ident.isFunction()) throw InterpreterRuntimeException("Unknown error at silinterpreter.cpp:" + std::to_string(__LINE__));
 
 	return ident.callFunc(*this, exprs);
 }
 std::vector<sil::IdentRefId> sil::Interpreter::callBuiltinFunc(std::vector<Expression> exprs) {
-	if (!exprs[0].isIdentifier()) throw InterpreterRuntimeException("Unknown error at silinterpreter.cpp:" + std::to_string(__LINE__));
-
-	Identifier& ident = istore[exprs[0].getIdentifier()];
-	if (!ident.isFunction()) throw InterpreterRuntimeException("Unknown error at silinterpreter.cpp:" + std::to_string(__LINE__));
+	Identifier& ident = istore[exprs[0].getIdentRefId()];
 
 	std::vector<IdentRefId> ret;
 	std::string surface = ident.getSurface();
@@ -528,6 +589,46 @@ std::vector<sil::IdentRefId> sil::Interpreter::callBuiltinFunc(std::vector<Expre
 	}
 	return ret;
 }
+std::vector<sil::IdentRefId> sil::Interpreter::identArithmetic(Interpreter& rs, std::vector<Expression> exprs) {
+	enum basicOperator {
+		add,
+		sub,
+		mul,
+		div,
+		other
+	};
+	std::vector<IdentRefId> ret;
+	Identifier& opid = rs.getIdentifier(exprs[0].getIdentRefId());
+	std::string opStr = opid.getSurface();
+	basicOperator opr = 
+		(opStr == "+") ? add :
+		(opStr == "-") ? sub :
+		(opStr == "*") ? mul :
+		(opStr == "/") ? div : other;
+
+	std::vector<IdentRefId> lv = rs.eval(exprs[1]);
+	std::vector<IdentRefId> rv = rs.eval(exprs[2]);
+	if (lv.size() != rv.size()) throw InterpreterRuntimeException("lvalue size not equal to rvalue size");
+	for (unsigned int i = 0; i < lv.size(); i++) {
+		switch (opr) {
+			case add:
+				ret.push_back(rs.pushIdentifier(rs.getIdentifier(lv[i]) + rs.getIdentifier(rv[i])));
+				break;
+			case sub:
+				ret.push_back(rs.pushIdentifier(rs.getIdentifier(lv[i]) - rs.getIdentifier(rv[i])));
+				break;
+			case mul:
+				ret.push_back(rs.pushIdentifier(rs.getIdentifier(lv[i]) * rs.getIdentifier(rv[i])));
+				break;
+			case div:
+				ret.push_back(rs.pushIdentifier(rs.getIdentifier(lv[i]) / rs.getIdentifier(rv[i])));
+				break;
+			default: break;
+		}
+	}
+	return ret;
+}
+
 
 int sil::Interpreter::run(Statement stmt) {
 	if (stmt.isBlock()) {

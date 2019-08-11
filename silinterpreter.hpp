@@ -51,6 +51,13 @@ namespace sil {
 		Identifier();
 		Identifier(std::string);
 
+		Identifier operator +(Identifier&);
+		Identifier operator -(Identifier&);
+		Identifier operator *(Identifier&);
+		Identifier operator /(Identifier&);
+		Identifier operator &&(Identifier&);
+		Identifier operator ||(Identifier&);
+
 		Identifier& setSurface(std::string);
 		Identifier& setDef(Definition);
 		Identifier& setType(std::string);
@@ -102,7 +109,7 @@ namespace sil {
 		bool isIdentifier();
 		Expression& setIdentifier(Identifier&);
 		Expression& setIdentifier(IdentRefId);
-		IdentRefId getIdentifier();
+		IdentRefId getIdentRefId();
 		Expression& pushExpression(Expression);
 		std::vector<Expression>& getExpressions();
 		std::string expressionTree(Interpreter&);
@@ -153,6 +160,9 @@ namespace sil {
 		std::vector<IdentRefId> callFunc(std::vector<Expression>);
 		std::vector<IdentRefId> callBuiltinFunc(std::vector<Expression>);
 
+		static std::vector<IdentRefId> identArithmetic(Interpreter&, std::vector<Expression>);
+
+		IdentRefId pushIdentifier(Identifier);
 		Identifier& getIdentifier(IdentRefId);
 		IdentRefId declareIdentifier(Identifier);
 		//Identifier* tmpIdentifier(Identifier);
