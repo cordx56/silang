@@ -149,8 +149,9 @@ std::string sil::Expression::expressionTree(Interpreter& rs, int depth) {
 
 // Statement class
 sil::Statement::Statement() {
+	loopCount = 0;
 }
-sil::Statement::Statement(Expression vexpr) {
+sil::Statement::Statement(Expression vexpr) : Statement() {
 	expr = vexpr;
 }
 sil::Statement& sil::Statement::setExpression(Expression vexpr) {

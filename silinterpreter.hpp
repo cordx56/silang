@@ -112,6 +112,7 @@ namespace sil {
 	class Statement {
 		Expression expr;
 		std::vector<Statement> stmts;
+		int loopCount;
 	public:
 		Statement();
 		Statement(Expression);
