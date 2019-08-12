@@ -160,12 +160,14 @@ namespace sil {
 		std::vector<IdentRefId> callFunc(std::vector<Expression>);
 		std::vector<IdentRefId> callBuiltinFunc(std::vector<Expression>);
 
+		std::vector<IdentRefId> identCopy(std::vector<IdentRefId>&, std::vector<IdentRefId>&);
+
+		static std::vector<IdentRefId> identCopy(Interpreter&, std::vector<Expression>);
 		static std::vector<IdentRefId> identArithmetic(Interpreter&, std::vector<Expression>);
 
 		IdentRefId pushIdentifier(Identifier);
 		Identifier& getIdentifier(IdentRefId);
 		IdentRefId declareIdentifier(Identifier);
-		//Identifier* tmpIdentifier(Identifier);
 		bool isIdentifierDeclared(std::string);
 		bool isIdentifierDeclared(std::string, std::string);
 		bool isIdentifierDeclared(std::string, int, std::string);

@@ -310,7 +310,7 @@ sil::Interpreter::Interpreter() {
 	declareIdentifier(ident.setSurface("::").setDef(Identifier::Definition::function)
 			.setType("void").setScope(0).setInfix(true).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("=").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identCopy));
 	declareIdentifier(ident.setSurface("+").setDef(Identifier::Definition::function)
 			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identArithmetic));
 	declareIdentifier(ident.setSurface("-").setDef(Identifier::Definition::function)
@@ -551,14 +551,6 @@ std::vector<sil::IdentRefId> sil::Interpreter::callBuiltinFunc(std::vector<Expre
 			if (!tmpi) throw InterpreterRuntimeException("Redefinition not supported");
 			ret.push_back(tmpi);
 		}
-	} else if (surface == "=") {
-		std::vector<IdentRefId> lv = eval(exprs[1]);
-		std::vector<IdentRefId> rv = eval(exprs[2]);
-		if (lv.size() != rv.size()) throw InterpreterRuntimeException("lvalue size not equal to rvalue size");
-		for (unsigned int i = 0; i < lv.size(); i++) {
-			istore[lv[i]].setValue(istore[rv[i]].castTo(istore[lv[i]].getType()).getValue());
-			ret.push_back(lv[i]);
-		}
 	} else if (surface == "print" || surface == "println") {
 		for (unsigned int i = 1; i < exprs.size(); i++) {
 			for (IdentRefId tmpi : eval(exprs[i])) {
@@ -588,6 +580,25 @@ std::vector<sil::IdentRefId> sil::Interpreter::callBuiltinFunc(std::vector<Expre
 		}
 	}
 	return ret;
+}
+std::vector<sil::IdentRefId> sil::Interpreter::identCopy(std::vector<IdentRefId>& lv, std::vector<IdentRefId>& rv) {
+	std::vector<IdentRefId> ret;
+	if (lv.size() != rv.size()) throw InterpreterRuntimeException("lvalue count not equal to rvalue count");
+	for (unsigned int i = 0; i < lv.size(); i++) {
+		if (getIdentifier(lv[i]).getType() == "array") {
+		} else if (getIdentifier(lv[i]).getType() == "map") {
+		} else {
+			istore[lv[i]].setValue(istore[rv[i]].castTo(istore[lv[i]].getType()).getValue());
+			ret.push_back(lv[i]);
+		}
+	}
+	return ret;
+}
+std::vector<sil::IdentRefId> sil::Interpreter::identCopy(Interpreter& rs, std::vector<Expression> exprs) {
+	if (exprs.size() != 3) throw InterpreterRuntimeException("arguments count too few/many");
+	std::vector<IdentRefId> lv = rs.eval(exprs[1]);
+	std::vector<IdentRefId> rv = rs.eval(exprs[2]);
+	return rs.identCopy(lv, rv);
 }
 std::vector<sil::IdentRefId> sil::Interpreter::identArithmetic(Interpreter& rs, std::vector<Expression> exprs) {
 	enum basicOperator {
