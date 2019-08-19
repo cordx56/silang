@@ -357,6 +357,8 @@ sil::Interpreter::Interpreter() {
 			.setType("array").setScope(0).setInfix(false).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("dump").setDef(Identifier::Definition::function)
 			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+	declareIdentifier(ident.setSurface("include").setDef(Identifier::Definition::function)
+			.setType("void").setScope(0).setInfix(false).setFuncPtr(Interpreter::identInclude));
 }
 
 
@@ -581,6 +583,16 @@ std::vector<sil::IdentRefId> sil::Interpreter::callBuiltinFunc(std::vector<Expre
 	}
 	return ret;
 }
+std::vector<sil::IdentRefId> sil::Interpreter::identInclude(Interpreter& rs, std::vector<Expression> exprs) {
+	std::vector<IdentRefId> ret;
+	for (unsigned int i = 1; i < exprs.size(); i++) {
+		std::vector<IdentRefId> tgtLib = rs.eval(exprs[i]);
+		std::string libFile = rs.getIdentifier(tgtLib[0]).getString();
+		std::string asName = (2 <= tgtLib.size()) ? rs.getIdentifier(tgtLib[1]).getString() : libFile;
+		rs.includeLib(libFile, asName, exprs);
+	}
+	return ret;
+}
 std::vector<sil::IdentRefId> sil::Interpreter::identCopy(std::vector<IdentRefId>& lv, std::vector<IdentRefId>& rv) {
 	std::vector<IdentRefId> ret;
 	if (lv.size() != rv.size()) throw InterpreterRuntimeException("lvalue count not equal to rvalue count");
@@ -717,7 +729,29 @@ sil::IdentRefId sil::Interpreter::identOf(std::string target, std::string is) {
 	return identOf(target, currentScope, is);
 }
 sil::IdentRefId sil::Interpreter::identOf(std::string is) {
+	auto dpos = is.find_first_of(".");
+	if (dpos != std::string::npos) {
+		return identOf(is.substr(0, dpos), 0, 1, is.substr(dpos + 1));
+	}
 	return identOf(currentTarget, is);
+}
+
+sil::Interpreter& sil::Interpreter::includeLib(std::string file, std::string as, std::vector<Expression>& args) {
+	std::string tgtBkup = currentTarget;
+	void *solib = dlopen((file + ".so").c_str(), RTLD_NOW);
+	char* errmsg;
+	if ((errmsg = dlerror()) != NULL) {
+		throw InterpreterRuntimeException(std::string("Library file couldn't open.\n") + errmsg);
+	}
+	silLibLoader silLoadLib = (silLibLoader)dlsym(solib, "silLoadLib");
+	if ((errmsg = dlerror()) != NULL) {
+		throw InterpreterRuntimeException(std::string("Library function couldn't load.\n") + errmsg);
+	}
+	currentTarget = as;
+	decldIdent[currentTarget].push_back(std::unordered_map<std::string, IdentRefId>());
+	silLoadLib(*this, args);
+	currentTarget = tgtBkup;
+	return *this;
 }
 
 

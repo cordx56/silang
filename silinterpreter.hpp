@@ -18,6 +18,7 @@ namespace sil {
 
 	typedef unsigned int IdentRefId;
 	typedef std::vector<IdentRefId> (*silFunc)(Interpreter&, std::vector<Expression>);
+	typedef void (*silLibLoader)(Interpreter&, std::vector<Expression>);
 
 	class Identifier {
 	public:
@@ -162,6 +163,7 @@ namespace sil {
 
 		std::vector<IdentRefId> identCopy(std::vector<IdentRefId>&, std::vector<IdentRefId>&);
 
+		static std::vector<IdentRefId> identInclude(Interpreter&, std::vector<Expression>);
 		static std::vector<IdentRefId> identCopy(Interpreter&, std::vector<Expression>);
 		static std::vector<IdentRefId> identArithmetic(Interpreter&, std::vector<Expression>);
 
@@ -176,7 +178,7 @@ namespace sil {
 		IdentRefId identOf(std::string, std::string);
 		IdentRefId identOf(std::string, int, std::string);
 		IdentRefId identOf(std::string, int, int, std::string);
-		Interpreter& importFrom(std::string, std::string, std::vector<Identifier&>);
+		Interpreter& includeLib(std::string, std::string, std::vector<Expression>&);
 
 		bool isWhitespace(char);
 		Statement parse(std::string);
@@ -205,4 +207,9 @@ namespace sil {
 		InterpreterRuntimeException(std::string);
 		InterpreterRuntimeException(std::string, int, int);
 	};
+}
+
+// for Dynamic link library
+extern "C" {
+	void silLoadLib(sil::Interpreter&, std::vector<sil::Expression>);
 }
