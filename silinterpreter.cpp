@@ -647,6 +647,7 @@ std::vector<sil::IdentRefId> sil::Interpreter::identArithmetic(Interpreter& rs, 
 
 
 int sil::Interpreter::run(Statement stmt) {
+	std::vector<IdentRefId> exprRet = eval(stmt.getExpression());
 	if (stmt.isBlock()) {
 		currentScope++;
 		validScopeDepth++;
@@ -660,8 +661,6 @@ int sil::Interpreter::run(Statement stmt) {
 			istore.destroy(itr->second);
 		}
 		decldIdent[currentTarget].pop_back();
-	} else {
-		eval(stmt.getExpression());
 	}
 	return 0;
 }
