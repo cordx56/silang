@@ -377,7 +377,8 @@ sil::Statement sil::Interpreter::parse(std::string stxt) {
 				targetExpr.back().pushExpression(Expression(istore.push(Identifier(buffer))));
 				buffer.clear();
 			}
-			targetStmt.back().pushStatement(targetExpr.back());
+			if (0 < targetExpr.back().getExpressions().size())
+				targetStmt.back().pushStatement(targetExpr.back());
 			targetExpr.pop_back();
 			targetExpr.push_back(Expression());
 
@@ -393,7 +394,7 @@ sil::Statement sil::Interpreter::parse(std::string stxt) {
 				}
 				i++;
 			} else if (c == '\"') {
-				if (nc != ' ' && nc != '\t' && nc != '\n') {
+				if (nc != ' ' && nc != '\t' && nc != '\n' && nc != ')') {
 					throw InterpreterSyntaxException("No space after string sequence");
 				}
 				dquoted = false;
@@ -409,7 +410,7 @@ sil::Statement sil::Interpreter::parse(std::string stxt) {
 				buffer += '\'';
 				i++;
 			} else if (c == '\'') {
-				if (nc != ' ' && nc != '\t' && nc != '\n') {
+				if (nc != ' ' && nc != '\t' && nc != '\n' && nc != ')') {
 					throw InterpreterSyntaxException("No space after string sequence");
 				}
 				squoted = false;
@@ -423,6 +424,10 @@ sil::Statement sil::Interpreter::parse(std::string stxt) {
 
 		} else if (c == '(') {
 			targetExpr.push_back(Expression());
+			switch (nc) {
+				case '\"': dquoted = true; i++; break;
+				case '\'': squoted = true; i++; break;
+			}
 		} else if (c == ')') {
 			targetExpr[targetExpr.size() - 2].pushExpression(targetExpr.back());
 			targetExpr.pop_back();
