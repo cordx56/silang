@@ -44,7 +44,6 @@ namespace sil {
 		Definition def;
 		std::string type;
 		int scope;
-		bool infix;
 		Value v;
 
 	public:
@@ -63,12 +62,10 @@ namespace sil {
 		Identifier& setType(std::string);
 		Identifier& setType(Identifier);
 		Identifier& setScope(int);
-		Identifier& setInfix(bool);
 		std::string getSurface();
 		Definition getDef();
 		std::string getType();
 		int getScope();
-		bool isInfix();
 		bool isFunction();
 		bool isVariable();
 		bool isConstant();

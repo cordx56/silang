@@ -5,7 +5,6 @@ sil::Identifier::Identifier() {
 	def = Definition::undefined;
 	type = "undefined";
 	scope = 0;
-	infix = false;
 	v.v_int = 0;
 	v.v_double = 0.0;
 	v.callPtr = nullptr;
@@ -32,12 +31,10 @@ sil::Identifier& sil::Identifier::setType(Identifier v) {
 	return setType(v.getSurface());
 }
 sil::Identifier& sil::Identifier::setScope(int v) { scope = v; return *this; }
-sil::Identifier& sil::Identifier::setInfix(bool v) { infix = v; return *this; }
 std::string sil::Identifier::getSurface() { return surface; }
 sil::Identifier::Definition sil::Identifier::getDef() { return def; }
 std::string sil::Identifier::getType() { return type; }
 int sil::Identifier::getScope() { return scope; }
-bool sil::Identifier::isInfix() { return infix; }
 bool sil::Identifier::isFunction() { return (def == Definition::function); }
 bool sil::Identifier::isVariable() { return (def == Definition::variable); }
 bool sil::Identifier::isConstant() { return (def == Definition::constant); }
@@ -306,57 +303,57 @@ sil::Interpreter::Interpreter() {
 	declareIdentifier(ident.setSurface("array").setDef(Identifier::Definition::typeName).setType("type"));
 	// function declaration
 	declareIdentifier(ident.setSurface("decas").setDef(Identifier::Definition::function)
-			.setType("void").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("void").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("::").setDef(Identifier::Definition::function)
-			.setType("void").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("void").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("=").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identCopy));
+			.setType("any").setScope(0).setFuncPtr(Interpreter::identCopy));
 	declareIdentifier(ident.setSurface("+").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identArithmetic));
+			.setType("any").setScope(0).setFuncPtr(Interpreter::identArithmetic));
 	declareIdentifier(ident.setSurface("-").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identArithmetic));
+			.setType("any").setScope(0).setFuncPtr(Interpreter::identArithmetic));
 	declareIdentifier(ident.setSurface("*").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identArithmetic));
+			.setType("any").setScope(0).setFuncPtr(Interpreter::identArithmetic));
 	declareIdentifier(ident.setSurface("/").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(Interpreter::identArithmetic));
+			.setType("any").setScope(0).setFuncPtr(Interpreter::identArithmetic));
 	declareIdentifier(ident.setSurface("+=").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("-=").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("*=").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("/=").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("==").setDef(Identifier::Definition::function)
-			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("bool").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("<").setDef(Identifier::Definition::function)
-			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("bool").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface(">").setDef(Identifier::Definition::function)
-			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("bool").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("<=").setDef(Identifier::Definition::function)
-			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("bool").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface(">=").setDef(Identifier::Definition::function)
-			.setType("bool").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("bool").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("!").setDef(Identifier::Definition::function)
-			.setType("bool").setScope(0).setInfix(false).setFuncPtr(nullptr));
+			.setType("bool").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("if").setDef(Identifier::Definition::function)
-			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+			.setType("void").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("loop").setDef(Identifier::Definition::function)
-			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+			.setType("void").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("{").setDef(Identifier::Definition::control)
-			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+			.setType("void").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("}").setDef(Identifier::Definition::control)
-			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+			.setType("void").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("print").setDef(Identifier::Definition::function)
-			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+			.setType("void").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("println").setDef(Identifier::Definition::function)
-			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+			.setType("void").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("!!").setDef(Identifier::Definition::function)
-			.setType("any").setScope(0).setInfix(true).setFuncPtr(nullptr));
+			.setType("any").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("push").setDef(Identifier::Definition::function)
-			.setType("array").setScope(0).setInfix(false).setFuncPtr(nullptr));
+			.setType("array").setScope(0).setFuncPtr(nullptr));
 	declareIdentifier(ident.setSurface("dump").setDef(Identifier::Definition::function)
-			.setType("void").setScope(0).setInfix(false).setFuncPtr(nullptr));
+			.setType("void").setScope(0).setFuncPtr(nullptr));
 }
 
 
@@ -500,13 +497,8 @@ std::vector<sil::IdentRefId> sil::Interpreter::eval(Expression expr) {
 	std::vector<Expression> exprStack;
 	for (int i = exprs.size() - 1; 0 <= i; i--) {
 		IdentRefId ident;
-		if (exprs[i].isIdentifier() && istore[(ident = eval(exprs[i])[0])].isFunction()) {
-			if (istore[ident].isInfix() && exprStack.size() == 1 && 0 < i) {
-				exprStack.push_back(exprs[--i]);
-				exprStack.push_back(eval(exprs[i + 1])[0]);
-			} else {
-				exprStack.push_back(eval(exprs[i])[0]);
-			}
+		if (i == 0 && exprs[i].isIdentifier() && istore[(ident = eval(exprs[i])[0])].isFunction()) {
+			exprStack.push_back(eval(exprs[i])[0]);
 			std::reverse(exprStack.begin(), exprStack.end());
 			std::vector<IdentRefId> retTmp = istore[ident].callFunc(*this, exprStack);
 			exprStack.clear();
