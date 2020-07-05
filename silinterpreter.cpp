@@ -551,6 +551,9 @@ std::vector<sil::IdentRefId> sil::Interpreter::callBuiltinFunc(std::vector<Expre
 	} else if (surface == "print" || surface == "println") {
 		for (unsigned int i = 1; i < exprs.size(); i++) {
 			for (IdentRefId tmpi : eval(exprs[i])) {
+				if (istore[tmpi].isUndefined()) {
+					throw InterpreterRuntimeException("Undefined value referenced");
+				}
 				std::cout << istore[tmpi].castTo("string").getString();
 			}
 		}
