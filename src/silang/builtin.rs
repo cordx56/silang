@@ -64,7 +64,7 @@ pub fn define_variable<'a>(ctx: &'a mut Context<'a>, factors: Vec<Factor>) -> Re
                 string: None,
                 int: None,
                 float: None,
-                statement: None,
+                user_defined_function: None,
                 function: None,
             }
         );

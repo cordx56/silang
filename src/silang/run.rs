@@ -13,7 +13,7 @@ use super::builtin;
 
 use std::collections::HashMap;
 
-pub fn search_identifier<'a>(ctx: &'a Context<'a>, name: &str) -> Option<&'a IdentifierValue<'a>> {
+pub fn search_identifier<'a>(ctx: &'a mut Context<'a>, name: &str) -> Option<&'a IdentifierValue<'a>> {
     let mut scope = ctx.scope;
     loop {
         if ctx.identifier_storage[scope].contains_key(name) {
@@ -34,29 +34,24 @@ pub fn eval<'a>(ctx: &'a mut Context<'a>, expr: Expression) -> Result<Vec<Factor
     if func.kind != FactorKind::Identifier {
         return Err("First factor is not identifier!")
     }
-    /*
     match search_identifier(ctx, func.name.as_ref().unwrap()) {
         Some(iv) => {
             if iv.identifier_type != IdentifierType::Function {
                 return Err("Identifier is not function!")
             }
             match iv.function {
-                Some(f) => Ok(Vec::new()),
-                None => match &iv.statement {
-                    Some(s) => run(&mut Context {
-                        scope: s.scope,
-                        identifier_storage: ctx.identifier_storage
-                    }, s.statement.clone()),
+                Some(f) => Err("Not implemented!"),//f(ctx, expr.factors),
+                None => match &iv.user_defined_function {
+                    Some(udf) => Err("Not implemented!"),//run(ctx, &udf.statement),
                     None => Err("Identifier is not function!"),
                 },
             }
         },
         None => Err("Identifier not found!"),
-    }*/
-    Err("Not implemented!")
+    }
 }
 
-pub fn run<'a>(ctx: &mut Context<'a>, statement: Statement) -> Result<Vec<Factor>, &'a str> {
+pub fn run<'a>(ctx: &mut Context<'a>, statement: &Statement) -> Result<Vec<Factor>, &'a str> {
     Err("Not implemented!")
 }
 
@@ -72,7 +67,7 @@ pub fn init_identifier_storage<'a>() -> IdentifierStorage<'a> {
             string: None,
             int: None,
             float: None,
-            statement: None,
+            user_defined_function: None,
             function: Some(builtin::define_variable),
         }
     );
@@ -83,7 +78,7 @@ pub fn init_identifier_storage<'a>() -> IdentifierStorage<'a> {
             string: None,
             int: None,
             float: None,
-            statement: None,
+            user_defined_function: None,
             function: Some(builtin::assign_variable),
         }
     );
@@ -95,8 +90,8 @@ pub fn init_identifier_storage<'a>() -> IdentifierStorage<'a> {
             string: None,
             int: None,
             float: None,
-            statement: None,
-            function: Some(builtin::assign_variable),
+            user_defined_function: None,
+            function: None,
         }
     );
 

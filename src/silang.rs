@@ -24,7 +24,7 @@ pub struct IdentifierValue<'a> {
     pub string: Option<String>,
     pub int: Option<i64>,
     pub float: Option<f64>,
-    pub statement: Option<UserDefinedFunction>,
+    pub user_defined_function: Option<UserDefinedFunction>,
     pub function: Option<fn (&'a mut Context<'a>, Vec<Factor>) -> Result<Vec<Factor>, &str>>,
 }
 
