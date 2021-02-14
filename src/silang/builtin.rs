@@ -7,6 +7,10 @@ use super::{
     Context,
 };
 
+use super::run::{
+    eval,
+};
+
 pub fn define_variable<'a>(ctx: &'a mut Context<'a>, factors: Vec<Factor>) -> Result<Vec<Factor>, &str> {
     if factors.len() != 3 {
         return Err("Argument length must be 2")
@@ -30,6 +34,7 @@ pub fn define_variable<'a>(ctx: &'a mut Context<'a>, factors: Vec<Factor>) -> Re
 
     let mut ident_name_vec = Vec::new();
     if lval.kind == FactorKind::Expression {
+        //for f in eval(ctx, lval.expression.as_ref().unwrap().clone()).unwrap() {
         for f in &lval.expression.as_ref().unwrap().factors {
             if f.kind != FactorKind::Identifier {
                 return Err("lval must be identifier")

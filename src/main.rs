@@ -22,5 +22,6 @@ println (a)
         scope: 0,
         identifier_storage: &mut is,
     };
-    println!("{:?}", silang::run::eval(&mut ctx, silang::parser::expression(":: a int").unwrap().1))
+    println!("{:?}", silang::run::eval(&mut ctx, silang::parser::expression(":: (a b c) (int int int)").unwrap().1));
+    //println!("{:?}", silang::run::eval(&mut ctx, silang::parser::expression("= a e").unwrap().1));
 }

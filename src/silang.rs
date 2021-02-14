@@ -14,11 +14,13 @@ pub enum IdentifierType {
     TypeName,
 }
 
+#[derive(Debug)]
 pub struct UserDefinedFunction {
     scope: usize,
     statement: Statement,
 }
 
+#[derive(Debug)]
 pub struct IdentifierValue<'a> {
     pub identifier_type: IdentifierType,
     pub string: Option<String>,
