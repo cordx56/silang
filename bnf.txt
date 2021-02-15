@@ -1,19 +1,4 @@
-
-Statement := Expression "\n" | "{" Statement* "}" | (Expression " ") Statement
-Expression := Identifier | Expression (Whitespace+ Expression)* | "(" Expression ")"
-Identifier := Name | Number | String
-Whitespace := " " | "\t"
-
-
-Expression := Identifier (Whitespace+ Expression)* | "(" Expression ")"
-
-
-Expression := Factor Whitespace Expression
-Factor := Identifier | Number | String | "(" Expression ")"
-
-
-
 Program := Statement*
-Statement := Expression "\n" | "{" Statement* "}" | Expression Whitespace Statement
+Statement := Expression "\n" | Expression? "{" Statement* "}"
 Expression := Factor (Whitespace+ Factor)*
-Factor := Identifier | Number | String | "(" Expression ")"
+Factor := String | Number | Identifier | "(" Expression ")"
