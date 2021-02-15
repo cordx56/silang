@@ -10,6 +10,7 @@ pub enum IdentifierType {
     String,
     Int,
     Float,
+    Bool,
     Function,
     TypeName,
 }
@@ -20,20 +21,20 @@ pub struct UserDefinedFunction {
     statement: Statement,
 }
 
-#[derive(Debug)]
-pub struct IdentifierValue<'a> {
+pub struct IdentifierValue {
     pub identifier_type: IdentifierType,
     pub string: Option<String>,
     pub int: Option<i64>,
     pub float: Option<f64>,
+    pub bool: Option<bool>,
     pub user_defined_function: Option<UserDefinedFunction>,
-    pub function: Option<fn (&'a mut Context<'a>, Vec<Factor>) -> Result<Vec<Factor>, &str>>,
+    pub function: Option<fn (&mut Context, Vec<Factor>) -> Result<Vec<Factor>, &str>>,
 }
 
-pub struct Identifier<'a> {
+pub struct Identifier {
     pub identifier_type: IdentifierType,
     pub name: String,
-    pub value: IdentifierValue<'a>,
+    pub value: IdentifierValue,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -67,8 +68,8 @@ pub struct Statement {
 }
 
 
-pub type IdentifierStorage<'a> = Vec<HashMap<String, IdentifierValue<'a>>>;
-pub struct Context<'a> {
+pub type IdentifierStorage = Vec<HashMap<String, IdentifierValue>>;
+pub struct Context {
     pub scope: usize,
-    pub identifier_storage: &'a mut IdentifierStorage<'a>,
+    pub identifier_storage: IdentifierStorage,
 }
