@@ -85,6 +85,8 @@ pub fn exec(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, &str
         },
     }
     let mut res = Vec::new();
+    ctx.scope += 1;
+    ctx.identifier_storage.push(HashMap::new());
     for s in statement.statements {
         match exec(ctx, s) {
             Ok(er) => {
@@ -95,12 +97,20 @@ pub fn exec(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, &str
             }
         }
     }
+    ctx.scope -= 1;
+    ctx.identifier_storage.pop();
     Ok(res)
 }
 
 pub fn run(ctx: &mut Context, program: Vec<Statement>) {
     for s in program {
-        exec(ctx, s);
+        match exec(ctx, s) {
+            Ok(_) => {},
+            Err(e) => {
+                eprintln!("{}", e);
+                return
+            },
+        }
     }
 }
 
