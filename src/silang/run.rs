@@ -13,11 +13,11 @@ use super::builtin;
 
 use std::collections::HashMap;
 
-pub fn search_identifier<'a>(ctx: &'a mut Context, name: &str) -> Option<&'a IdentifierValue> {
+pub fn search_identifier<'a>(ctx: &'a mut Context, name: &str) -> Option<(usize, &'a IdentifierValue)> {
     let mut scope = ctx.scope;
     loop {
         if ctx.identifier_storage[scope].contains_key(name) {
-            return Some(&ctx.identifier_storage[scope][name])
+            return Some((scope, &ctx.identifier_storage[scope][name]))
         }
         if scope == 0 {
             return None
@@ -44,14 +44,14 @@ pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, &str> {
     };
     match search_identifier(ctx, func.name.as_ref().unwrap()) {
         Some(iv) => {
-            if iv.identifier_type != IdentifierType::Function {
+            if iv.1.identifier_type != IdentifierType::Function {
                 return Ok(expr.factors)
             }
-            match iv.function {
+            match iv.1.function {
                 Some(f) => {
                     return f(ctx, expr.factors)
                 },
-                None => match &iv.user_defined_function {
+                None => match &iv.1.user_defined_function {
                     Some(udf) => {
                         udf_scope = udf.scope;
                         udf_statement = udf.statement.clone();
@@ -68,13 +68,13 @@ pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, &str> {
     };
     let ctx_scope = ctx.scope;
     ctx.scope = udf_scope;
-    let result = run(ctx, udf_statement);
+    let result = exec(ctx, udf_statement);
     ctx.scope = ctx_scope;
     //result
     Ok(Vec::new())
 }
 
-pub fn run(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, &str> {
+pub fn exec(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, &str> {
     match eval(ctx, statement.expression) {
         Ok(er) => {
             if 0 < er.len() && er[0].kind == FactorKind::Identifier && er[0].name.as_ref().unwrap() == "return" {
@@ -86,7 +86,7 @@ pub fn run(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, &str>
     }
     let mut res = Vec::new();
     for s in statement.statements {
-        match run(ctx, s) {
+        match exec(ctx, s) {
             Ok(er) => {
                 res = er;
             },
@@ -98,6 +98,11 @@ pub fn run(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, &str>
     Ok(res)
 }
 
+pub fn run(ctx: &mut Context, program: Vec<Statement>) {
+    for s in program {
+        exec(ctx, s);
+    }
+}
 
 pub fn init_identifier_storage() -> IdentifierStorage {
     let mut is = Vec::new();
@@ -105,6 +110,18 @@ pub fn init_identifier_storage() -> IdentifierStorage {
 
     scope0.insert(
         "::".to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::define_variable),
+        }
+    );
+    scope0.insert(
+        "decas".to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::Function,
             string: None,
@@ -129,6 +146,32 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     );
 
     scope0.insert(
+        "print".to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::print),
+        }
+    );
+    scope0.insert(
+        "println".to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::print),
+        }
+    );
+
+    /*
+    scope0.insert(
         "int".to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::TypeName,
@@ -136,6 +179,31 @@ pub fn init_identifier_storage() -> IdentifierStorage {
             int: None,
             float: None,
             bool: None,
+            user_defined_function: None,
+            function: None,
+        }
+    );
+    */
+    scope0.insert(
+        "true".to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Bool,
+            string: None,
+            int: None,
+            float: None,
+            bool: Some(true),
+            user_defined_function: None,
+            function: None,
+        }
+    );
+    scope0.insert(
+        "false".to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Bool,
+            string: None,
+            int: None,
+            float: None,
+            bool: Some(false),
             user_defined_function: None,
             function: None,
         }

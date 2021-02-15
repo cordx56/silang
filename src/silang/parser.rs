@@ -124,9 +124,9 @@ pub fn expression(s: &str) -> IResult<&str, Expression> {
 
 pub fn factor(s: &str) -> IResult<&str, Factor> {
     alt((
+        string,
         number,
         identifier,
-        string,
         map(
             delimited(
                 char('('),

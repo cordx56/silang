@@ -4,7 +4,7 @@ pub mod builtin;
 
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum IdentifierType {
     None,
     String,
@@ -15,12 +15,13 @@ pub enum IdentifierType {
     TypeName,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UserDefinedFunction {
     scope: usize,
     statement: Statement,
 }
 
+#[derive(Clone)]
 pub struct IdentifierValue {
     pub identifier_type: IdentifierType,
     pub string: Option<String>,
