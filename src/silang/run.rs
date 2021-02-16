@@ -128,6 +128,9 @@ pub fn exec(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, Stri
             let second_factor_name = second_factor.name.as_ref().unwrap();
             match search_identifier(ctx, second_factor_name) {
                 Some(iv) => {
+                    if iv.1.identifier_type != IdentifierType::Function {
+                        return Err("lval is not function".to_owned())
+                    }
                     let scope = iv.0;
                     ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().string = None;
                     ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().int = None;

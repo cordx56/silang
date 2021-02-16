@@ -84,17 +84,21 @@ pub fn statement(s: &str) -> IResult<&str, Statement> {
                         expression,
                     ))
                 ),
-                multispace0,
+                space0,
                 delimited(
                     char('{'),
-                    many0(
-                        statement,
-                    ),
+                    permutation((
+                        multispace0,
+                        many0(
+                            statement,
+                        ),
+                        multispace0,
+                    )),
                     char('}'),
                 ),
                 multispace0,
             )),
-            |(expr, _, stmts, _)| -> Statement {
+            |(expr, _, (_, stmts, _), _)| -> Statement {
                 match expr {
                     Some(e) => Statement { expression: e.1, statements: stmts },
                     None => Statement { expression: Expression { factors: Vec::new() }, statements: stmts },
@@ -196,4 +200,67 @@ pub fn string(s: &str) -> IResult<&str, Factor> {
             Factor { kind: FactorKind::String, name: None, string: Some(string), int: None, float: None, expression: None }
         }
     )(s)
+}
+
+fn push_indent(buffer: &mut String, depth: usize) {
+    for n in 0..depth {
+        buffer.push_str("    ");
+    }
+}
+pub fn parse_tree(stmts: Vec<Statement>) -> String {
+    let mut buffer = String::new();
+    for s in stmts {
+        buffer.push_str(&parse_tree_statement(s, 0));
+    }
+    buffer
+}
+pub fn parse_tree_statement(stmt: Statement, depth: usize) -> String {
+    let mut buffer = String::new();
+    buffer.push_str(&parse_tree_expression(stmt.expression, depth));
+    for s in stmt.statements {
+        buffer.push_str(&parse_tree_statement(s, depth + 1));
+    }
+    buffer
+}
+pub fn parse_tree_expression(expr: Expression, depth: usize) -> String {
+    let mut buffer = String::new();
+    for f in expr.factors {
+        buffer.push_str(&parse_tree_factor(f, depth));
+    }
+    buffer
+}
+pub fn parse_tree_factor(factor: Factor, depth: usize) -> String {
+    let mut buffer = String::new();
+    push_indent(&mut buffer, depth);
+    buffer.push_str("Factor: ");
+    if factor.kind == FactorKind::Identifier {
+        buffer.push_str("Identifier\n");
+        push_indent(&mut buffer, depth);
+        buffer.push_str("        ");
+        buffer.push_str(&factor.name.unwrap());
+        buffer.push_str("\n");
+    } else if factor.kind == FactorKind::String {
+        buffer.push_str("String\n");
+        push_indent(&mut buffer, depth);
+        buffer.push_str("        ");
+        buffer.push_str(&factor.string.unwrap());
+        buffer.push_str("\n");
+    } else if factor.kind == FactorKind::Int {
+        buffer.push_str("Int\n");
+        push_indent(&mut buffer, depth);
+        buffer.push_str("        ");
+        buffer.push_str(&format!("{}", factor.int.unwrap()));
+        buffer.push_str("\n");
+    } else if factor.kind == FactorKind::Float {
+        buffer.push_str("Float\n");
+        push_indent(&mut buffer, depth);
+        buffer.push_str("        ");
+        buffer.push_str(&format!("{}", factor.float.unwrap()));
+        buffer.push_str("\n");
+    } else if factor.kind == FactorKind::Expression {
+        buffer.push_str("Expression\n");
+        buffer.push_str(&parse_tree_expression(factor.expression.unwrap(), depth + 1));
+        buffer.push_str("\n");
+    }
+    buffer
 }

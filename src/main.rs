@@ -65,9 +65,16 @@ fn main() {
         None => {
             println!("SILang Interpreter Ver.{}", VERSION);
             loop {
-                print!("> ");
+                if 0 < buffer.len() {
+                    print!(". ");
+                } else {
+                    print!("> ");
+                }
                 std::io::stdout().flush().ok();
                 std::io::stdin().read_line(&mut buffer).ok();
+                if buffer.len() == 0 {
+                    break;
+                }
                 match silang::parser::statement_all_consuming(&buffer) {
                     Ok (s) => {
                         match silang::run::exec(&mut ctx, s.1) {
