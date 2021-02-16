@@ -75,16 +75,18 @@ pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, &str> {
 }
 
 pub fn exec(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, &str> {
+    let mut res = Vec::new();
     match eval(ctx, statement.expression) {
         Ok(er) => {
             if 0 < er.len() && er[0].kind == FactorKind::Identifier && er[0].name.as_ref().unwrap() == "return" {
+                // Return
             }
+            res = er;
         },
         Err(e) => {
             return Err("TODO: Error message")
         },
     }
-    let mut res = Vec::new();
     ctx.scope += 1;
     ctx.identifier_storage.push(HashMap::new());
     for s in statement.statements {
@@ -102,16 +104,17 @@ pub fn exec(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, &str
     Ok(res)
 }
 
-pub fn run(ctx: &mut Context, program: Vec<Statement>) {
+pub fn run(ctx: &mut Context, program: Vec<Statement>) -> Result<(), &str> {
     for s in program {
         match exec(ctx, s) {
             Ok(_) => {},
             Err(e) => {
                 eprintln!("{}", e);
-                return
+                return Err("TODO: Error message")
             },
         }
     }
+    Ok(())
 }
 
 pub fn init_identifier_storage() -> IdentifierStorage {

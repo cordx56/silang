@@ -242,14 +242,42 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
     Ok(left_factors)
 }
 
+pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), &str> {
+    if f.kind == FactorKind::Identifier {
+        match search_identifier(ctx, f.name.as_ref().unwrap()) {
+            Some(iv) => {
+                if iv.1.identifier_type == IdentifierType::String {
+                    print!("{}", iv.1.string.as_ref().unwrap());
+                } else if iv.1.identifier_type == IdentifierType::Int {
+                    print!("{}", iv.1.int.unwrap());
+                } else if iv.1.identifier_type == IdentifierType::Float {
+                    print!("{}", iv.1.float.unwrap());
+                } else if iv.1.identifier_type == IdentifierType::Bool {
+                    print!("{}", iv.1.bool.unwrap());
+                }
+            },
+            None => {
+                return Err("Undefined identifier")
+            },
+        }
+    } else if f.kind == FactorKind::String {
+        print!("{}", f.string.unwrap());
+    } else if f.kind == FactorKind::Int {
+        print!("{}", f.int.unwrap());
+    } else if f.kind == FactorKind::Float {
+        print!("{}", f.float.unwrap());
+    }
+    Ok(())
+}
+
 pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, &str> {
-    let mut print_factors = Vec::new();
+    let mut factors_to_print = Vec::new();
     for n in 1..factors.len() {
         if factors[n].kind == FactorKind::Expression {
             match eval(ctx, factors[n].expression.as_ref().unwrap().clone()) {
                 Ok(er) => {
                     for f in er {
-                        print_factors.push(f);
+                        factors_to_print.push(f);
                     }
                 },
                 Err(e) => {
@@ -257,33 +285,15 @@ pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, &st
                 },
             }
         } else {
-            print_factors.push(factors[n].clone());
+            factors_to_print.push(factors[n].clone());
         }
     }
-    for f in print_factors {
-        if f.kind == FactorKind::Identifier {
-            match search_identifier(ctx, f.name.as_ref().unwrap()) {
-                Some(iv) => {
-                    if iv.1.identifier_type == IdentifierType::String {
-                        print!("{}", iv.1.string.as_ref().unwrap());
-                    } else if iv.1.identifier_type == IdentifierType::Int {
-                        print!("{}", iv.1.int.unwrap());
-                    } else if iv.1.identifier_type == IdentifierType::Float {
-                        print!("{}", iv.1.float.unwrap());
-                    } else if iv.1.identifier_type == IdentifierType::Bool {
-                        print!("{}", iv.1.bool.unwrap());
-                    }
-                },
-                None => {
-                    return Err("Identifier not defined")
-                },
-            }
-        } else if f.kind == FactorKind::String {
-            print!("{}", f.string.unwrap());
-        } else if f.kind == FactorKind::Int {
-            print!("{}", f.int.unwrap());
-        } else if f.kind == FactorKind::Float {
-            print!("{}", f.float.unwrap());
+    for f in factors_to_print {
+        match print_factor(ctx, f) {
+            Ok(_) => {},
+            Err(e) => {
+                return Err("TODO: Error message")
+            },
         }
     }
     if factors[0].name.as_ref().unwrap() == "println" {
