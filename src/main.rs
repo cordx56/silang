@@ -16,7 +16,7 @@ use clap::{
 static VERSION: &str = "0.2.0";
 
 fn main() {
-    let matches = App::new("SILang interpreter")
+    let matches = App::new("SILang Interpreter")
         .version(VERSION)
         .author("Kaoru Saso <cordx56@cordx.net>")
         .about("Run SILang code")
@@ -29,11 +29,37 @@ fn main() {
         identifier_storage: silang::run::init_identifier_storage(),
     };
 
-    let mut input_file = String::new();
     let mut buffer = String::new();
     match matches.value_of("FILE") {
         Some(i) => {
-            input_file = i.to_owned();
+            if i == "-" {
+                let stdin = io::stdin();
+                let mut handle = stdin.lock();
+                handle.read_to_string(&mut buffer).ok();
+            } else {
+                match fs::read_to_string(i) {
+                    Ok(s) => {
+                        buffer = s;
+                    },
+                    Err(_) => {
+                        eprintln!("File read error");
+                        return
+                    },
+                }
+            }
+            buffer.push_str("\n");
+
+            let parse_result = silang::parser::program(&buffer);
+            // println!("{:?}", parse_result);
+            match parse_result {
+                Ok(program) => {
+                    silang::run::run(&mut ctx, program.1).ok();
+                },
+                Err(e) => {
+                    eprintln!("Parse error");
+                    eprintln!("{}", e);
+                },
+            }
         },
         None => {
             println!("SILang Interpreter Ver.{}", VERSION);
@@ -62,34 +88,6 @@ fn main() {
                     },
                 }
             }
-        }
-    }
-
-    if input_file == "-" {
-        let stdin = io::stdin();
-        let mut handle = stdin.lock();
-        handle.read_to_string(&mut buffer).ok();
-    } else {
-        match fs::read_to_string(input_file) {
-            Ok(s) => {
-                buffer = s;
-            },
-            Err(_) => {
-                eprintln!("File read error");
-                return
-            },
-        }
-    }
-
-    let parse_result = silang::parser::program(&buffer);
-    // println!("{:?}", parse_result);
-    match parse_result {
-        Ok(program) => {
-            silang::run::run(&mut ctx, program.1).ok();
-        },
-        Err(e) => {
-            eprintln!("Parse error");
-            eprintln!("{}", e);
         },
     }
 }

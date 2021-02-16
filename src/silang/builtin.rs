@@ -128,6 +128,19 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                     function: None,
                 }
             );
+        } else if type_name_vec[n] == "function" {
+            ctx.identifier_storage[ctx.scope].insert(
+                ident_name_vec[n].clone(),
+                IdentifierValue {
+                    identifier_type: IdentifierType::Function,
+                    string: None,
+                    int: None,
+                    float: None,
+                    bool: None,
+                    user_defined_function: None,
+                    function: None,
+                }
+            );
         } else {
             return Err("Unknown type")
         }
@@ -254,6 +267,8 @@ pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), &str> {
                     print!("{}", iv.1.float.unwrap());
                 } else if iv.1.identifier_type == IdentifierType::Bool {
                     print!("{}", iv.1.bool.unwrap());
+                } else {
+                    return Err("Can't print unknown identifier")
                 }
             },
             None => {
@@ -266,6 +281,8 @@ pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), &str> {
         print!("{}", f.int.unwrap());
     } else if f.kind == FactorKind::Float {
         print!("{}", f.float.unwrap());
+    } else {
+        return Err("Can't print unknown factor")
     }
     Ok(())
 }
