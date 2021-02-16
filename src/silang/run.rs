@@ -27,7 +27,7 @@ pub fn search_identifier<'a>(ctx: &'a mut Context, name: &str) -> Option<(usize,
     }
 }
 
-pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, &str> {
+pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, String> {
     if expr.factors.len() == 0 {
         return Ok(Vec::new())
     }
@@ -58,7 +58,7 @@ pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, &str> {
                         udf_statement = udf.statement.clone();
                     },
                     None => {
-                        return Err("Identifier is not function!")
+                        return Err("Identifier is not function!".to_owned())
                     },
                 },
             }
@@ -69,99 +69,123 @@ pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, &str> {
     };
     //let ctx_scope = ctx.scope;
     //ctx.scope = udf_scope;
+    ctx.push_new();
     let result = exec(ctx, udf_statement);
+    ctx.pop();
     //ctx.scope = ctx_scope;
     result
-    //Ok(Vec::new())
 }
 
-pub fn exec(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, &str> {
-    let mut res = Vec::new();
-    // User Defined Function Assignment
-    if statement.expression.factors.len() == 2 &&
-        statement.expression.factors[0].kind == FactorKind::Identifier &&
-            statement.expression.factors[0].name.as_ref().unwrap() == "=" {
-        let mut second_factor = statement.expression.factors[1].clone();
-        if second_factor.kind == FactorKind::Expression {
-            match eval(ctx, second_factor.expression.as_ref().unwrap().clone()) {
-                Ok(er) => {
-                    if er.len() != 1 {
-                        return Err("Function definition error")
-                    }
-                    second_factor = er[0].clone();
+pub fn exec(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, String> {
+    loop {
+        let mut res = Vec::new();
+        // User Defined Function Assignment
+        if statement.expression.factors.len() == 2 &&
+            statement.expression.factors[0].kind == FactorKind::Identifier &&
+                statement.expression.factors[0].name.as_ref().unwrap() == "=" {
+            let mut second_factor = statement.expression.factors[1].clone();
+            if second_factor.kind == FactorKind::Expression {
+                match eval(ctx, second_factor.expression.as_ref().unwrap().clone()) {
+                    Ok(er) => {
+                        if er.len() != 1 {
+                            return Err("Function definition error".to_owned())
+                        }
+                        second_factor = er[0].clone();
+                    },
+                    Err(e) => {
+                        return Err(e)
+                    },
+                }
+            }
+            if second_factor.kind != FactorKind::Identifier {
+                return Err("lval must be identifier".to_owned())
+            }
+            let second_factor_name = second_factor.name.as_ref().unwrap();
+            match search_identifier(ctx, second_factor_name) {
+                Some(iv) => {
+                    let scope = iv.0;
+                    ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().string = None;
+                    ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().int = None;
+                    ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().float = None;
+                    ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().bool = None;
+                    ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().user_defined_function = Some(UserDefinedFunction {
+                        scope: ctx.scope + 1,
+                        statement: Statement {
+                            expression: Expression { factors: Vec::new() },
+                            statements: statement.statements,
+                        }
+                    });
+                    ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().function = None;
+                    return Ok(vec![second_factor])
                 },
-                Err(e) => {
-                    return Err("TODO: Error message")
+                None => {
+                    return Err("Identifier not defined".to_owned())
                 },
             }
-        }
-        if second_factor.kind != FactorKind::Identifier {
-            return Err("lval must be identifier")
-        }
-        let second_factor_name = second_factor.name.as_ref().unwrap();
-        match search_identifier(ctx, second_factor_name) {
-            Some(iv) => {
-                let scope = iv.0;
-                ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().string = None;
-                ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().int = None;
-                ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().float = None;
-                ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().bool = None;
-                ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().user_defined_function = Some(UserDefinedFunction {
-                    scope: ctx.scope + 1,
-                    statement: Statement {
-                        expression: Expression { factors: Vec::new() },
-                        statements: statement.statements,
-                    }
-                });
-                ctx.identifier_storage[scope].get_mut(second_factor_name).unwrap().function = None;
-                Ok(vec![second_factor])
-            },
-            None => {
-                return Err("Identifier not defined")
-            },
-        }
-    // Normal Statement
-    } else {
-        match eval(ctx, statement.expression) {
-            Ok(er) => {
-                res = er;
-            },
-            Err(e) => {
-                return Err("TODO: Error message")
-            },
-        }
-        ctx.scope += 1;
-        ctx.identifier_storage.push(HashMap::new());
-        for s in statement.statements {
-            match exec(ctx, s) {
-                Ok(er) => {
-                    if 0 < er.len() && er[0].kind == FactorKind::Identifier && er[0].name.as_ref().unwrap() == "return" {
-                        let mut ret = Vec::new();
-                        for n in 1..er.len() {
-                            ret.push(er[n].clone());
+        /*
+        // if statement
+        } else if statement.expression.factors.len() == 2 &&
+            statement.expression.factors[0].kind == FactorKind::Identifier &&
+                statement.expression.factors[0].name.as_ref().unwrap() == "if" {
+            let mut second_factor = statement.expression.factors[1].clone();
+            if second_factor.kind == FactorKind::Expression {
+                match eval(ctx, second_factor.expression.as_ref().unwrap().clone()) {
+                    Ok(er) => {
+                        if er.len() != 1 {
+                            return Err("Target value must be only one")
                         }
-                        return Ok(ret)
-                    }
+                        second_factor = er[0].clone();
+                    },
+                    Err(e) => {
+                        return Err("TODO: Error message")
+                    },
+                }
+            }
+            if second_factor.kind != FactorKind::Identifier {
+                return Err("lval must be identifier")
+            }
+            let second_factor_name = second_factor.name.as_ref().unwrap();
+            match search_identifier(ctx, second_factor_name) {*/
+        // Normal Statement
+        } else {
+            match eval(ctx, statement.expression) {
+                Ok(er) => {
                     res = er;
                 },
                 Err(e) => {
-                    return Err("TODO: Error message")
+                    return Err(e)
+                },
+            }
+            ctx.push_new();
+            for s in statement.statements {
+                match exec(ctx, s) {
+                    Ok(er) => {
+                        if 0 < er.len() && er[0].kind == FactorKind::Identifier && er[0].name.as_ref().unwrap() == "return" {
+                            let mut ret = Vec::new();
+                            for n in 1..er.len() {
+                                ret.push(er[n].clone());
+                            }
+                            return Ok(ret)
+                        }
+                        res = er;
+                    },
+                    Err(e) => {
+                        return Err(e)
+                    }
                 }
             }
+            ctx.pop();
+            return Ok(res)
         }
-        ctx.scope -= 1;
-        ctx.identifier_storage.pop();
-        Ok(res)
     }
 }
 
-pub fn run(ctx: &mut Context, program: Vec<Statement>) -> Result<(), &str> {
+pub fn run(ctx: &mut Context, program: Vec<Statement>) -> Result<(), String> {
     for s in program {
         match exec(ctx, s) {
             Ok(_) => {},
             Err(e) => {
-                eprintln!("{}", e);
-                return Err("TODO: Error message")
+                return Err(e)
             },
         }
     }

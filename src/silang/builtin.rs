@@ -12,9 +12,9 @@ use super::run::{
     eval,
 };
 
-pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, &str> {
+pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
     if factors.len() != 3 {
-        return Err("Argument length must be 2")
+        return Err("Argument length must be 2".to_owned())
     }
     let lval = &factors[1];
     let rval = &factors[2];
@@ -25,18 +25,18 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             Ok(er) => {
                 for f in er {
                     if f.kind != FactorKind::Identifier {
-                        return Err("rval must be identifier")
+                        return Err("rval must be identifier".to_owned())
                     }
                     type_name_vec.push(f.name.as_ref().unwrap().to_owned());
                 }
             },
             Err(e) => {
-                return Err("TODO: Error message")
+                return Err(e)
             },
         }
     } else {
         if rval.kind != FactorKind::Identifier {
-            return Err("rval must be identifier")
+            return Err("rval must be identifier".to_owned())
         }
         type_name_vec.push(rval.name.as_ref().unwrap().to_owned());
     }
@@ -48,32 +48,32 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             Ok(er) => {
                 for f in er {
                     if f.kind != FactorKind::Identifier {
-                        return Err("lval must be identifier")
+                        return Err("lval must be identifier".to_owned())
                     }
                     if ctx.identifier_storage[ctx.scope].contains_key(f.name.as_ref().unwrap()) {
-                        return Err("Redefinition not supported")
+                        return Err("Redefinition not supported".to_owned())
                     }
                     ident_name_vec.push(f.name.as_ref().unwrap().to_owned());
                     return_vec.push(f);
                 }
             },
             Err(e) => {
-                return Err("TODO: Error message")
+                return Err(e)
             },
         }
     } else {
         if lval.kind != FactorKind::Identifier {
-            return Err("lval must be identifier")
+            return Err("lval must be identifier".to_owned())
         }
         if ctx.identifier_storage[ctx.scope].contains_key(lval.name.as_ref().unwrap()) {
-            return Err("Redefinition not supported")
+            return Err("Redefinition not supported".to_owned())
         }
         ident_name_vec.push(lval.name.as_ref().unwrap().to_owned());
         return_vec.push(lval.clone());
     }
 
     if ident_name_vec.len() != type_name_vec.len() {
-        return Err("lval and rval length must be equal")
+        return Err("lval and rval length must be equal".to_owned())
     }
     for n in 0..ident_name_vec.len() {
         if type_name_vec[n] == "string" {
@@ -142,15 +142,15 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                 }
             );
         } else {
-            return Err("Unknown type")
+            return Err("Unknown type".to_owned())
         }
     }
     Ok(return_vec)
 }
 
-pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, &str> {
+pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
     if factors.len() != 3 {
-        return Err("Argument length must be 2")
+        return Err("Argument length must be 2".to_owned())
     }
     let lval = &factors[1];
     let rval = &factors[2];
@@ -162,7 +162,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                 right_factors = er;
             },
             Err(e) => {
-                return Err("TODO: Error message")
+                return Err(e)
             },
         }
     } else {
@@ -176,7 +176,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                 left_factors = er;
             },
             Err(e) => {
-                return Err("TODO: Error message")
+                return Err(e)
             },
         }
     } else {
@@ -184,7 +184,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
     }
 
     if left_factors.len() != right_factors.len() {
-        return Err("lval and rval length must be equal")
+        return Err("lval and rval length must be equal".to_owned())
     }
     for n in 0..left_factors.len() {
         let mut right_identifier_value = IdentifierValue {
@@ -202,7 +202,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                     right_identifier_value = iv.1.clone();
                 },
                 None => {
-                    return Err("Identifier not defined")
+                    return Err("Identifier not defined".to_owned())
                 },
             }
         }
@@ -213,12 +213,12 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                 scope = iv.0;
             },
             None => {
-                return Err("Identifier not defined")
+                return Err("Identifier not defined".to_owned())
             },
         }
         if right_factors[n].kind == FactorKind::Identifier {
             if ctx.identifier_storage[scope][left_factor_name].identifier_type != right_identifier_value.identifier_type {
-                return Err("Type not matched")
+                return Err("Type not matched".to_owned())
             }
             ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().identifier_type = right_identifier_value.identifier_type;
             ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().string = right_identifier_value.string;
@@ -230,7 +230,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
         } else {
             if ctx.identifier_storage[scope][left_factor_name].identifier_type == IdentifierType::String {
                 if right_factors[n].kind != FactorKind::String {
-                    return Err("Type not matched")
+                    return Err("Type not matched".to_owned())
                 }
                 ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().string = Some(right_factors[n].string.as_ref().unwrap().to_owned());
             } else if ctx.identifier_storage[scope][left_factor_name].identifier_type == IdentifierType::Int {
@@ -239,7 +239,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                 } else if right_factors[n].kind == FactorKind::Float {
                     ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().int = Some(right_factors[n].float.unwrap() as i64);
                 } else {
-                    return Err("Type not matched")
+                    return Err("Type not matched".to_owned())
                 }
             } else if ctx.identifier_storage[scope][left_factor_name].identifier_type == IdentifierType::Float {
                 if right_factors[n].kind == FactorKind::Int {
@@ -247,7 +247,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                 } else if right_factors[n].kind == FactorKind::Float {
                     ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().float = Some(right_factors[n].float.unwrap());
                 } else {
-                    return Err("Type not matched")
+                    return Err("Type not matched".to_owned())
                 }
             }
         }
@@ -255,7 +255,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
     Ok(left_factors)
 }
 
-pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), &str> {
+pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), String> {
     if f.kind == FactorKind::Identifier {
         match search_identifier(ctx, f.name.as_ref().unwrap()) {
             Some(iv) => {
@@ -268,11 +268,11 @@ pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), &str> {
                 } else if iv.1.identifier_type == IdentifierType::Bool {
                     print!("{}", iv.1.bool.unwrap());
                 } else {
-                    return Err("Can't print unknown identifier")
+                    return Err("Can't print unknown identifier".to_owned())
                 }
             },
             None => {
-                return Err("Undefined identifier")
+                return Err("Undefined identifier".to_owned())
             },
         }
     } else if f.kind == FactorKind::String {
@@ -282,12 +282,12 @@ pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), &str> {
     } else if f.kind == FactorKind::Float {
         print!("{}", f.float.unwrap());
     } else {
-        return Err("Can't print unknown factor")
+        return Err("Can't print unknown factor".to_owned())
     }
     Ok(())
 }
 
-pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, &str> {
+pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
     let mut factors_to_print = Vec::new();
     for n in 1..factors.len() {
         if factors[n].kind == FactorKind::Expression {
@@ -298,7 +298,7 @@ pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, &st
                     }
                 },
                 Err(e) => {
-                    return Err("TODO: Error message")
+                    return Err(e)
                 },
             }
         } else {
@@ -309,7 +309,7 @@ pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, &st
         match print_factor(ctx, f) {
             Ok(_) => {},
             Err(e) => {
-                return Err("TODO: Error message")
+                return Err(e)
             },
         }
     }

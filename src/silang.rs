@@ -29,7 +29,7 @@ pub struct IdentifierValue {
     pub float: Option<f64>,
     pub bool: Option<bool>,
     pub user_defined_function: Option<UserDefinedFunction>,
-    pub function: Option<fn (&mut Context, Vec<Factor>) -> Result<Vec<Factor>, &str>>,
+    pub function: Option<fn (&mut Context, Vec<Factor>) -> Result<Vec<Factor>, String>>,
 }
 
 pub struct Identifier {
@@ -73,4 +73,15 @@ pub type IdentifierStorage = Vec<HashMap<String, IdentifierValue>>;
 pub struct Context {
     pub scope: usize,
     pub identifier_storage: IdentifierStorage,
+}
+
+impl Context {
+    pub fn push_new(&mut self) {
+        self.scope += 1;
+        self.identifier_storage.push(HashMap::new());
+    }
+    pub fn pop(&mut self) {
+        self.scope -= 1;
+        self.identifier_storage.pop();
+    }
 }

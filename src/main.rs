@@ -41,8 +41,9 @@ fn main() {
                     Ok(s) => {
                         buffer = s;
                     },
-                    Err(_) => {
+                    Err(e) => {
                         eprintln!("File read error");
+                        eprintln!("{}", e);
                         return
                     },
                 }
