@@ -1,7 +1,4 @@
 use super::{
-    IdentifierType,
-    IdentifierValue,
-    Identifier,
     FactorKind,
     Factor,
     Expression,
@@ -13,7 +10,6 @@ extern crate nom;
 use nom::{
     IResult,
     character::complete::{
-        alpha1,
         space0,
         space1,
         multispace0,
@@ -37,6 +33,7 @@ use nom::{
         opt,
         map,
         value,
+        all_consuming,
     },
     multi::{
         many0,
@@ -50,6 +47,9 @@ use std::char::{
 };
 use std::u16;
 
+pub fn program_all_consuming(s: &str) -> IResult<&str, Vec<Statement>> {
+    all_consuming(program)(s)
+}
 pub fn program(s: &str) -> IResult<&str, Vec<Statement>> {
     many1(
         delimited(
@@ -60,6 +60,9 @@ pub fn program(s: &str) -> IResult<&str, Vec<Statement>> {
     )(s)
 }
 
+pub fn statement_all_consuming(s: &str) -> IResult<&str, Statement> {
+    all_consuming(statement)(s)
+}
 pub fn statement(s: &str) -> IResult<&str, Statement> {
     alt((
         map(
@@ -88,9 +91,10 @@ pub fn statement(s: &str) -> IResult<&str, Statement> {
                         statement,
                     ),
                     char('}'),
-                )
+                ),
+                multispace0,
             )),
-            |(expr, _, stmts)| -> Statement {
+            |(expr, _, stmts, _)| -> Statement {
                 match expr {
                     Some(e) => Statement { expression: e.1, statements: stmts },
                     None => Statement { expression: Expression { factors: Vec::new() }, statements: stmts },
@@ -100,6 +104,9 @@ pub fn statement(s: &str) -> IResult<&str, Statement> {
     ))(s)
 }
 
+pub fn expression_all_consuming(s: &str) -> IResult<&str, Expression> {
+    all_consuming(expression)(s)
+}
 pub fn expression(s: &str) -> IResult<&str, Expression> {
     map(
         permutation((
@@ -130,15 +137,20 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
         map(
             delimited(
                 char('('),
-                delimited(
-                    multispace0,
-                    expression,
-                    multispace0,
+                opt(
+                    delimited(
+                        multispace0,
+                        expression,
+                        multispace0,
+                    )
                 ),
                 char(')'),
             ),
-            |expr: Expression| -> Factor {
-                Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, expression: Some(expr) }
+            |expr: Option<Expression>| -> Factor {
+                match expr {
+                    Some(e) => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, expression: Some(e) },
+                    None => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, expression: Some(Expression { factors: Vec::new() }) },
+                }
             }
         )
     ))(s)

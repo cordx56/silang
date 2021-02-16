@@ -32,18 +32,37 @@ pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, String> 
         return Ok(Vec::new())
     }
     let func = &expr.factors[0];
-    if func.kind != FactorKind::Identifier {
+    let mut factors = Vec::new();
+    if func.kind == FactorKind::Expression {
+        match eval(ctx, func.expression.as_ref().unwrap().clone()) {
+            Ok(er) => {
+                for f in er {
+                    factors.push(f);
+                }
+            },
+            Err(e) => {
+                return Err(e)
+            },
+        }
+        if factors.len() == 0 {
+            for n in 1..expr.factors.len() {
+                factors.push(expr.factors[n].clone());
+            }
+            return Ok(factors)
+        }
+    } else if func.kind != FactorKind::Identifier {
         return Ok(expr.factors)
+    } else {
+        factors.push(func.clone());
+    }
+    for n in 1..expr.factors.len() {
+        factors.push(expr.factors[n].clone());
+    }
+    if factors.len() == 0 {
+        return Ok(factors)
     }
 
-    let mut udf_scope: usize = 0;
-    let mut udf_statement = Statement {
-        expression: Expression {
-            factors: Vec::new(),
-        },
-        statements: Vec::new(),
-    };
-    match search_identifier(ctx, func.name.as_ref().unwrap()) {
+    match search_identifier(ctx, factors[0].name.as_ref().unwrap()) {
         Some(iv) => {
             if iv.1.identifier_type != IdentifierType::Function {
                 return Ok(expr.factors)
@@ -54,8 +73,18 @@ pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, String> 
                 },
                 None => match &iv.1.user_defined_function {
                     Some(udf) => {
-                        udf_scope = udf.scope;
-                        udf_statement = udf.statement.clone();
+                        let udf_scope = udf.scope;
+                        let udf_statement = udf.statement.clone();
+                        ctx.push_new();
+                        match exec(ctx, udf_statement) {
+                            Ok(er) => {
+                                ctx.pop();
+                                return Ok(er);
+                            },
+                            Err(e) => {
+                                return Err(e)
+                            },
+                        }
                     },
                     None => {
                         return Err("Identifier is not function!".to_owned())
@@ -69,11 +98,7 @@ pub fn eval(ctx: &mut Context, expr: Expression) -> Result<Vec<Factor>, String> 
     };
     //let ctx_scope = ctx.scope;
     //ctx.scope = udf_scope;
-    ctx.push_new();
-    let result = exec(ctx, udf_statement);
-    ctx.pop();
     //ctx.scope = ctx_scope;
-    result
 }
 
 pub fn exec(ctx: &mut Context, statement: Statement) -> Result<Vec<Factor>, String> {

@@ -50,7 +50,7 @@ fn main() {
             }
             buffer.push_str("\n");
 
-            let parse_result = silang::parser::program(&buffer);
+            let parse_result = silang::parser::program_all_consuming(&buffer);
             // println!("{:?}", parse_result);
             match parse_result {
                 Ok(program) => {
@@ -68,7 +68,7 @@ fn main() {
                 print!("> ");
                 std::io::stdout().flush().ok();
                 std::io::stdin().read_line(&mut buffer).ok();
-                match silang::parser::statement(&buffer) {
+                match silang::parser::statement_all_consuming(&buffer) {
                     Ok (s) => {
                         match silang::run::exec(&mut ctx, s.1) {
                             Ok(fs) => {
