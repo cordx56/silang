@@ -141,12 +141,12 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
         map(
             delimited(
                 char('('),
-                opt(
-                    delimited(
-                        multispace0,
+                delimited(
+                    multispace0,
+                    opt(
                         expression,
-                        multispace0,
-                    )
+                    ),
+                    multispace0,
                 ),
                 char(')'),
             ),
@@ -203,7 +203,7 @@ pub fn string(s: &str) -> IResult<&str, Factor> {
 }
 
 fn push_indent(buffer: &mut String, depth: usize) {
-    for n in 0..depth {
+    for _ in 0..depth {
         buffer.push_str("    ");
     }
 }
