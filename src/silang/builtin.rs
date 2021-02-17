@@ -9,6 +9,7 @@ use super::{
 
 use super::run::{
     search_identifier,
+    assign_identifier,
     eval,
 };
 
@@ -220,13 +221,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             if ctx.identifier_storage[scope][left_factor_name].identifier_type != right_identifier_value.identifier_type {
                 return Err("Type not matched".to_owned())
             }
-            ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().identifier_type = right_identifier_value.identifier_type;
-            ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().string = right_identifier_value.string;
-            ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().int = right_identifier_value.int;
-            ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().float = right_identifier_value.float;
-            ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().bool = right_identifier_value.bool;
-            ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().user_defined_function = right_identifier_value.user_defined_function;
-            ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().function = right_identifier_value.function;
+            assign_identifier(ctx, scope, left_factor_name, right_identifier_value);
         } else {
             if ctx.identifier_storage[scope][left_factor_name].identifier_type == IdentifierType::String {
                 if right_factors[n].kind != FactorKind::String {
