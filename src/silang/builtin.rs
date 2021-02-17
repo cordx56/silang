@@ -22,7 +22,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
 
     let mut type_name_vec = Vec::new();
     if rval.kind == FactorKind::Expression {
-        match eval(ctx, rval.expression.as_ref().unwrap().clone()) {
+        match eval(ctx, rval.expression.as_ref().unwrap()) {
             Ok(er) => {
                 for f in er {
                     if f.kind != FactorKind::Identifier {
@@ -45,7 +45,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
     let mut ident_name_vec = Vec::new();
     let mut return_vec = Vec::new();
     if lval.kind == FactorKind::Expression {
-        match eval(ctx, lval.expression.as_ref().unwrap().clone()) {
+        match eval(ctx, lval.expression.as_ref().unwrap()) {
             Ok(er) => {
                 for f in er {
                     if f.kind != FactorKind::Identifier {
@@ -158,7 +158,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
 
     let mut right_factors = Vec::new();
     if rval.kind == FactorKind::Expression {
-        match eval(ctx, rval.expression.as_ref().unwrap().clone()) {
+        match eval(ctx, rval.expression.as_ref().unwrap()) {
             Ok(er) => {
                 right_factors = er;
             },
@@ -172,7 +172,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
 
     let mut left_factors = Vec::new();
     if lval.kind == FactorKind::Expression {
-        match eval(ctx, lval.expression.as_ref().unwrap().clone()) {
+        match eval(ctx, lval.expression.as_ref().unwrap()) {
             Ok(er) => {
                 left_factors = er;
             },
@@ -286,7 +286,7 @@ pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Str
     let mut factors_to_print = Vec::new();
     for n in 1..factors.len() {
         if factors[n].kind == FactorKind::Expression {
-            match eval(ctx, factors[n].expression.as_ref().unwrap().clone()) {
+            match eval(ctx, factors[n].expression.as_ref().unwrap()) {
                 Ok(er) => {
                     for f in er {
                         factors_to_print.push(f);

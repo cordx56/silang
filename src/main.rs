@@ -77,7 +77,7 @@ fn main() {
                 }
                 match silang::parser::statement_all_consuming(&buffer) {
                     Ok (s) => {
-                        match silang::run::exec(&mut ctx, s.1) {
+                        match silang::run::exec(&mut ctx, &s.1) {
                             Ok(fs) => {
                                 for f in fs {
                                     silang::builtin::print_factor(&mut ctx, f).ok();
