@@ -13,6 +13,8 @@ use super::run::{
     eval,
 };
 
+use super::define;
+
 pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
     if factors.len() != 3 {
         return Err("Argument length must be 2".to_owned())
@@ -77,7 +79,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
         return Err("lval and rval length must be equal".to_owned())
     }
     for n in 0..ident_name_vec.len() {
-        if type_name_vec[n] == "string" {
+        if type_name_vec[n] == define::STRING {
             ctx.identifier_storage[ctx.scope].insert(
                 ident_name_vec[n].clone(),
                 IdentifierValue {
@@ -90,7 +92,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                     function: None,
                 }
             );
-        } else if type_name_vec[n] == "int" {
+        } else if type_name_vec[n] == define::INT {
             ctx.identifier_storage[ctx.scope].insert(
                 ident_name_vec[n].clone(),
                 IdentifierValue {
@@ -103,7 +105,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                     function: None,
                 }
             );
-        } else if type_name_vec[n] == "float" {
+        } else if type_name_vec[n] == define::FLOAT {
             ctx.identifier_storage[ctx.scope].insert(
                 ident_name_vec[n].clone(),
                 IdentifierValue {
@@ -116,7 +118,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                     function: None,
                 }
             );
-        } else if type_name_vec[n] == "bool" {
+        } else if type_name_vec[n] == define::BOOL {
             ctx.identifier_storage[ctx.scope].insert(
                 ident_name_vec[n].clone(),
                 IdentifierValue {
@@ -129,7 +131,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                     function: None,
                 }
             );
-        } else if type_name_vec[n] == "function" {
+        } else if type_name_vec[n] == define::FUNCTION {
             ctx.identifier_storage[ctx.scope].insert(
                 ident_name_vec[n].clone(),
                 IdentifierValue {
@@ -308,7 +310,7 @@ pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Str
             },
         }
     }
-    if factors[0].name.as_ref().unwrap() == "println" {
+    if factors[0].name.as_ref().unwrap() == define::PRINTLN {
         println!("");
     }
     Ok(Vec::new())

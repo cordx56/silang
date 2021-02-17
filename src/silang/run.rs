@@ -11,6 +11,7 @@ use super::{
 };
 
 use super::builtin;
+use super::define;
 
 use std::collections::HashMap;
 
@@ -118,7 +119,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
         // User Defined Function Assignment
         if statement.expression.factors.len() == 2 &&
             statement.expression.factors[0].kind == FactorKind::Identifier &&
-                statement.expression.factors[0].name.as_ref().unwrap() == "=" {
+                statement.expression.factors[0].name.as_ref().unwrap() == define::ASSIGN {
             let mut second_factor = statement.expression.factors[1].clone();
             if second_factor.kind == FactorKind::Expression {
                 match eval(ctx, second_factor.expression.as_ref().unwrap()) {
@@ -169,8 +170,8 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
         // if statement
         } else if statement.expression.factors.len() == 2 &&
             statement.expression.factors[0].kind == FactorKind::Identifier &&
-                (statement.expression.factors[0].name.as_ref().unwrap() == "if" ||
-                statement.expression.factors[0].name.as_ref().unwrap() == "loop") {
+                (statement.expression.factors[0].name.as_ref().unwrap() == define::IF ||
+                statement.expression.factors[0].name.as_ref().unwrap() == define::LOOP) {
             let if_loop = statement.expression.factors[0].name.as_ref().unwrap();
             let mut second_factor = statement.expression.factors[1].clone();
             if second_factor.kind == FactorKind::Expression {
@@ -196,7 +197,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                         return Err("Target value is not bool".to_owned())
                     }
                     if iv.1.bool.unwrap() {
-                        if if_loop == "loop" {
+                        if if_loop == define::LOOP {
                             is_loop = true;
                         }
                     } else {
@@ -221,7 +222,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
         for s in &statement.statements {
             match exec(ctx, s) {
                 Ok(er) => {
-                    if 0 < er.len() && er[0].kind == FactorKind::Identifier && er[0].name.as_ref().unwrap() == "return" {
+                    if 0 < er.len() && er[0].kind == FactorKind::Identifier && er[0].name.as_ref().unwrap() == define::RETURN {
                         let mut ret = Vec::new();
                         for n in 1..er.len() {
                             ret.push(er[n].clone());
@@ -271,7 +272,7 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         }
     );
     scope0.insert(
-        "decas".to_owned(),
+        define::DECAS.to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::Function,
             string: None,
@@ -283,7 +284,7 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         }
     );
     scope0.insert(
-        "=".to_owned(),
+        define::ASSIGN.to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::Function,
             string: None,
@@ -296,7 +297,7 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     );
 
     scope0.insert(
-        "print".to_owned(),
+        define::PRINT.to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::Function,
             string: None,
@@ -308,7 +309,7 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         }
     );
     scope0.insert(
-        "println".to_owned(),
+        define::PRINTLN.to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::Function,
             string: None,
@@ -335,7 +336,7 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     );
     */
     scope0.insert(
-        "true".to_owned(),
+        define::TRUE.to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::Bool,
             string: None,
@@ -347,7 +348,7 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         }
     );
     scope0.insert(
-        "false".to_owned(),
+        define::FALSE.to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::Bool,
             string: None,
