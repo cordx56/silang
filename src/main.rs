@@ -13,7 +13,7 @@ use clap::{
     App,
 };
 
-static VERSION: &str = "0.2.0";
+static VERSION: &str = "0.2.0-beta";
 
 fn main() {
     let matches = App::new("SILang Interpreter")

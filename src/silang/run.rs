@@ -260,7 +260,7 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     let mut scope0 = HashMap::new();
 
     scope0.insert(
-        "::".to_owned(),
+        define::DECAS_ALIAS.to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::Function,
             string: None,
@@ -321,12 +321,24 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         }
     );
 
-    /*
     scope0.insert(
-        "int".to_owned(),
+        define::AS.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::as_cast),
+        }
+    );
+
+    scope0.insert(
+        define::STRING.to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::TypeName,
-            string: None,
+            string: Some(define::STRING.to_owned()),
             int: None,
             float: None,
             bool: None,
@@ -334,7 +346,55 @@ pub fn init_identifier_storage() -> IdentifierStorage {
             function: None,
         }
     );
-    */
+    scope0.insert(
+        define::INT.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::TypeName,
+            string: Some(define::INT.to_owned()),
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: None,
+        }
+    );
+    scope0.insert(
+        define::FLOAT.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::TypeName,
+            string: Some(define::FLOAT.to_owned()),
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: None,
+        }
+    );
+    scope0.insert(
+        define::BOOL.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::TypeName,
+            string: Some(define::BOOL.to_owned()),
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: None,
+        }
+    );
+    scope0.insert(
+        define::FUNCTION.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::TypeName,
+            string: Some(define::FUNCTION.to_owned()),
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: None,
+        }
+    );
+
     scope0.insert(
         define::TRUE.to_owned(),
         IdentifierValue {

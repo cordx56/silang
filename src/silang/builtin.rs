@@ -205,7 +205,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                     right_identifier_value = iv.1.clone();
                 },
                 None => {
-                    return Err("Identifier not defined".to_owned())
+                    return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
                 },
             }
         }
@@ -216,7 +216,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                 scope = iv.0;
             },
             None => {
-                return Err("Identifier not defined".to_owned())
+                return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
             },
         }
         if right_factors[n].kind == FactorKind::Identifier {
@@ -269,7 +269,7 @@ pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), String> {
                 }
             },
             None => {
-                return Err("Undefined identifier".to_owned())
+                return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
             },
         }
     } else if f.kind == FactorKind::String {
@@ -312,6 +312,252 @@ pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Str
     }
     if factors[0].name.as_ref().unwrap() == define::PRINTLN {
         println!("");
+    }
+    Ok(Vec::new())
+}
+
+pub fn identifier_value_to_factor(iv: &IdentifierValue) -> Result<Factor, String> {
+    if iv.identifier_type == IdentifierType::String {
+        Ok(Factor {
+            kind: FactorKind::String,
+            name: None,
+            string: Some(iv.string.as_ref().unwrap().clone()),
+            int: None,
+            float: None,
+            expression: None,
+        })
+    } else if iv.identifier_type == IdentifierType::Int {
+        Ok(Factor {
+            kind: FactorKind::Int,
+            name: None,
+            string: None,
+            int: Some(iv.int.unwrap()),
+            float: None,
+            expression: None,
+        })
+    } else if iv.identifier_type == IdentifierType::Float {
+        Ok(Factor {
+            kind: FactorKind::Int,
+            name: None,
+            string: None,
+            int: None,
+            float: Some(iv.float.unwrap()),
+            expression: None,
+        })
+    } else if iv.identifier_type == IdentifierType::Bool {
+        if iv.bool.unwrap() {
+            Ok(Factor {
+                kind: FactorKind::Identifier,
+                name: Some(define::TRUE.to_owned()),
+                string: None,
+                int: None,
+                float: None,
+                expression: None,
+            })
+        } else {
+            Ok(Factor {
+                kind: FactorKind::Identifier,
+                name: Some(define::FALSE.to_owned()),
+                string: None,
+                int: None,
+                float: None,
+                expression: None,
+            })
+        }
+    } else {
+        Err("Unable to cast from Identifier to Factor".to_owned())
+    }
+}
+
+pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
+    let mut res = Factor {
+        kind: factor.kind.clone(),
+        name: factor.name.clone(),
+        string: factor.string.clone(),
+        int: factor.int,
+        float: factor.float,
+        expression: factor.expression.clone(),
+    };
+    if factor.kind == FactorKind::String {
+        if to == FactorKind::Int {
+            match factor.string.as_ref().unwrap().parse() {
+                Ok(num) => {
+                    res = Factor {
+                        kind: to,
+                        name: None,
+                        string: None,
+                        int: Some(num),
+                        float: None,
+                        expression: None,
+                    };
+                },
+                Err(e) => {
+                    return Err(define::UNABLE_TO_CAST.to_owned())
+                },
+            }
+        } else if to == FactorKind::Float {
+            match factor.string.as_ref().unwrap().parse() {
+                Ok(num) => {
+                    res = Factor {
+                        kind: to,
+                        name: None,
+                        string: None,
+                        int: None,
+                        float: Some(num),
+                        expression: None,
+                    };
+                },
+                Err(e) => {
+                    return Err(define::UNABLE_TO_CAST.to_owned())
+                },
+            }
+        }
+    } else if factor.kind == FactorKind::Int {
+        if to == FactorKind::String {
+            res = Factor {
+                kind: to,
+                name: None,
+                string: Some(factor.int.unwrap().to_string()),
+                int: None,
+                float: None,
+                expression: None,
+            }
+        } else if to == FactorKind::Float {
+            res = Factor {
+                kind: to,
+                name: None,
+                string: None,
+                int: None,
+                float: Some(factor.int.unwrap() as f64),
+                expression: None,
+            }
+        }
+     } else if factor.kind == FactorKind::Float {
+        if to == FactorKind::String {
+            res = Factor {
+                kind: to,
+                name: None,
+                string: Some(factor.float.unwrap().to_string()),
+                int: None,
+                float: None,
+                expression: None,
+            }
+        } else if to == FactorKind::Int {
+            res = Factor {
+                kind: to,
+                name: None,
+                string: None,
+                int: Some(factor.float.unwrap() as i64),
+                float: None,
+                expression: None,
+            }
+        }
+    } else {
+        return Err("Unable to cast".to_owned())
+    }
+    Ok(res)
+}
+
+pub fn as_cast(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+    if factors.len() != 3 {
+        return Err("Argument length must be 2".to_owned())
+    }
+    let mut lval = factors[1].clone();
+    let mut rval = factors[2].clone();
+    if lval.kind == FactorKind::Expression {
+        match eval(ctx, lval.expression.as_ref().unwrap()) {
+            Ok(er) => {
+                if er.len() != 1 {
+                    return Err("lval length must be 1".to_owned())
+                }
+                lval = er[0].clone();
+            },
+            Err(e) => {
+                return Err(e)
+            },
+        }
+    }
+    if rval.kind == FactorKind::Expression {
+        match eval(ctx, rval.expression.as_ref().unwrap()) {
+            Ok(er) => {
+                if er.len() != 1 {
+                    return Err("rval length must be 1".to_owned())
+                }
+                rval = er[0].clone();
+            },
+            Err(e) => {
+                return Err(e)
+            },
+        }
+    }
+    let mut to_type = FactorKind::String;
+    match search_identifier(ctx, rval.name.as_ref().unwrap()) {
+        Some(iv) => {
+            if iv.1.identifier_type != IdentifierType::TypeName {
+                return Err("Identifier is not type".to_owned())
+            }
+            if iv.1.string.as_ref().unwrap() == define::STRING {
+                to_type = FactorKind::String;
+            } else if iv.1.string.as_ref().unwrap() == define::INT {
+                to_type = FactorKind::Int;
+            } else if iv.1.string.as_ref().unwrap() == define::FLOAT {
+                to_type = FactorKind::Float;
+            } else {
+                return Err(format!("Can't cast to {}", iv.1.string.as_ref().unwrap()))
+            }
+        },
+        None => {
+            return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
+        },
+    }
+    if lval.kind == FactorKind::Identifier {
+        match search_identifier(ctx, lval.name.as_ref().unwrap()) {
+            Some(iv) => {
+                match identifier_value_to_factor(&iv.1) {
+                    Ok(factor) => {
+                        match cast_factor(&factor, to_type)  {
+                            Ok(f) => {
+                                return Ok(vec![f])
+                            },
+                            Err(e) => {
+                                return Err(e)
+                            },
+                        }
+                    },
+                    Err(e) => {
+                        return Err(e)
+                    },
+                }
+            },
+            None => {
+                return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
+            },
+        }
+    } else {
+        match cast_factor(&lval, to_type) {
+            Ok(f) => Ok(vec![f]),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+pub fn add(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+    let mut factors_to_add = Vec::new();
+    for n in 1..factors.len() {
+        if factors[n].kind == FactorKind::Expression {
+            match eval(ctx, factors[n].expression.as_ref().unwrap()) {
+                Ok(er) => {
+                    for f in er {
+                        factors_to_add.push(f)
+                    }
+                },
+                Err(e) => {
+                    return Err(e)
+                },
+            }
+        } else {
+            factors_to_add.push(factors[n].clone());
+        }
     }
     Ok(Vec::new())
 }
