@@ -278,6 +278,12 @@ pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), String> {
         print!("{}", f.int.unwrap());
     } else if f.kind == FactorKind::Float {
         print!("{}", f.float.unwrap());
+    } else if f.kind == FactorKind::Bool {
+        if f.bool.unwrap() {
+            print!("true");
+        } else {
+            print!("false");
+        }
     } else {
         return Err("Can't print unknown factor".to_owned())
     }
@@ -324,6 +330,7 @@ pub fn identifier_value_to_factor(iv: &IdentifierValue) -> Result<Factor, String
             string: Some(iv.string.as_ref().unwrap().clone()),
             int: None,
             float: None,
+            bool: None,
             expression: None,
         })
     } else if iv.identifier_type == IdentifierType::Int {
@@ -333,51 +340,36 @@ pub fn identifier_value_to_factor(iv: &IdentifierValue) -> Result<Factor, String
             string: None,
             int: Some(iv.int.unwrap()),
             float: None,
+            bool: None,
             expression: None,
         })
     } else if iv.identifier_type == IdentifierType::Float {
         Ok(Factor {
-            kind: FactorKind::Int,
+            kind: FactorKind::Float,
             name: None,
             string: None,
             int: None,
             float: Some(iv.float.unwrap()),
+            bool: None,
             expression: None,
         })
     } else if iv.identifier_type == IdentifierType::Bool {
-        if iv.bool.unwrap() {
-            Ok(Factor {
-                kind: FactorKind::Identifier,
-                name: Some(define::TRUE.to_owned()),
-                string: None,
-                int: None,
-                float: None,
-                expression: None,
-            })
-        } else {
-            Ok(Factor {
-                kind: FactorKind::Identifier,
-                name: Some(define::FALSE.to_owned()),
-                string: None,
-                int: None,
-                float: None,
-                expression: None,
-            })
-        }
+        Ok(Factor {
+            kind: FactorKind::Bool,
+            name: None,
+            string: None,
+            int: None,
+            float: None,
+            bool: Some(iv.bool.unwrap()),
+            expression: None,
+        })
     } else {
         Err("Unable to cast from Identifier to Factor".to_owned())
     }
 }
 
 pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
-    let mut res = Factor {
-        kind: factor.kind.clone(),
-        name: factor.name.clone(),
-        string: factor.string.clone(),
-        int: factor.int,
-        float: factor.float,
-        expression: factor.expression.clone(),
-    };
+    let mut res = factor.clone();
     if factor.kind == FactorKind::String {
         if to == FactorKind::Int {
             match factor.string.as_ref().unwrap().parse() {
@@ -388,6 +380,7 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                         string: None,
                         int: Some(num),
                         float: None,
+                        bool: None,
                         expression: None,
                     };
                 },
@@ -404,6 +397,7 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                         string: None,
                         int: None,
                         float: Some(num),
+                        bool: None,
                         expression: None,
                     };
                 },
@@ -420,6 +414,7 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                 string: Some(factor.int.unwrap().to_string()),
                 int: None,
                 float: None,
+                bool: None,
                 expression: None,
             }
         } else if to == FactorKind::Float {
@@ -429,6 +424,7 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                 string: None,
                 int: None,
                 float: Some(factor.int.unwrap() as f64),
+                bool: None,
                 expression: None,
             }
         }
@@ -440,6 +436,7 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                 string: Some(factor.float.unwrap().to_string()),
                 int: None,
                 float: None,
+                bool: None,
                 expression: None,
             }
         } else if to == FactorKind::Int {
@@ -449,6 +446,7 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                 string: None,
                 int: Some(factor.float.unwrap() as i64),
                 float: None,
+                bool: None,
                 expression: None,
             }
         }
@@ -541,7 +539,262 @@ pub fn as_cast(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, S
     }
 }
 
-pub fn add(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Factor, String> {
+    if opr == define::ADD {
+        if lval.kind == FactorKind::String && rval.kind == FactorKind::String {
+            let mut string = String::new();
+            string += lval.string.as_ref().unwrap();
+            string += rval.string.as_ref().unwrap();
+            return Ok(Factor {
+                kind: FactorKind::String,
+                name: None,
+                string: Some(string),
+                int: None,
+                float: None,
+                bool: None,
+                expression: None,
+            })
+        } else if lval.kind == FactorKind::Int {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: Some(lval.int.unwrap() + rval.int.unwrap()),
+                    float: None,
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some((lval.int.unwrap() as f64) + rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        } else if lval.kind == FactorKind::Float {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() + (rval.int.unwrap() as f64)),
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() + rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        }
+        return Err(define::UNSUPPORTED_OPERATION.to_owned())
+    } else if opr == define::SUB {
+        if lval.kind == FactorKind::Int {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: Some(lval.int.unwrap() - rval.int.unwrap()),
+                    float: None,
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some((lval.int.unwrap() as f64) - rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        } else if lval.kind == FactorKind::Float {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() - (rval.int.unwrap() as f64)),
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() - rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        }
+        return Err(define::UNSUPPORTED_OPERATION.to_owned())
+    } else if opr == define::MUL {
+        if lval.kind == FactorKind::Int {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: Some(lval.int.unwrap() * rval.int.unwrap()),
+                    float: None,
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some((lval.int.unwrap() as f64) * rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        } else if lval.kind == FactorKind::Float {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() * (rval.int.unwrap() as f64)),
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() * rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        }
+        return Err(define::UNSUPPORTED_OPERATION.to_owned())
+    } else if opr == define::DIV {
+        if lval.kind == FactorKind::Int {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: Some(lval.int.unwrap() / rval.int.unwrap()),
+                    float: None,
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some((lval.int.unwrap() as f64) / rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        } else if lval.kind == FactorKind::Float {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() / (rval.int.unwrap() as f64)),
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() / rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        }
+        return Err(define::UNSUPPORTED_OPERATION.to_owned())
+    } else if opr == define::REM {
+        if lval.kind == FactorKind::Int {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: Some(lval.int.unwrap() % rval.int.unwrap()),
+                    float: None,
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some((lval.int.unwrap() as f64) % rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        } else if lval.kind == FactorKind::Float {
+            if rval.kind == FactorKind::Int {
+                return Ok(Factor {
+                    kind: FactorKind::Int,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() % (rval.int.unwrap() as f64)),
+                    bool: None,
+                    expression: None,
+                })
+            } else if rval.kind == FactorKind::Float {
+                return Ok(Factor {
+                    kind: FactorKind::Float,
+                    name: None,
+                    string: None,
+                    int: None,
+                    float: Some(lval.float.unwrap() % rval.float.unwrap()),
+                    bool: None,
+                    expression: None,
+                })
+            }
+        }
+        return Err(define::UNSUPPORTED_OPERATION.to_owned())
+    } else {
+        Err("Unknown operator".to_owned())
+    }
+}
+
+pub fn arithmetic(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+    let opr = factors[0].name.as_ref().unwrap();
     let mut factors_to_add = Vec::new();
     for n in 1..factors.len() {
         if factors[n].kind == FactorKind::Expression {
@@ -559,5 +812,61 @@ pub fn add(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Strin
             factors_to_add.push(factors[n].clone());
         }
     }
-    Ok(Vec::new())
+    if factors_to_add.len() == 0 {
+        return Err("No arguments".to_owned())
+    }
+    let mut res = factors_to_add[0].clone();
+    if res.kind == FactorKind::Identifier {
+        match search_identifier(ctx, res.name.as_ref().unwrap()) {
+            Some(iv) => {
+                match identifier_value_to_factor(iv.1) {
+                    Ok(f) => {
+                        res = f;
+                    },
+                    Err(e) => {
+                        return Err(e)
+                    },
+                }
+            },
+            None => {
+                return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
+            },
+        }
+    }
+    for n in 1..factors_to_add.len() {
+        if factors_to_add[n].kind == FactorKind::Identifier {
+            match search_identifier(ctx, factors_to_add[n].name.as_ref().unwrap()) {
+                Some(iv) => {
+                    match identifier_value_to_factor(iv.1) {
+                        Ok(f) => {
+                            match factor_arithmetic(opr, &res, &f) {
+                                Ok(fa) => {
+                                    res = fa;
+                                },
+                                Err(e) => {
+                                    return Err(e)
+                                },
+                            }
+                        },
+                        Err(e) => {
+                            return Err(e)
+                        },
+                    }
+                },
+                None => {
+                    return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
+                },
+            }
+        } else {
+            match factor_arithmetic(opr, &res, &factors_to_add[n]) {
+                Ok(fa) => {
+                    res = fa;
+                },
+                Err(e) => {
+                    return Err(e)
+                },
+            }
+        }
+    }
+    Ok(vec![res])
 }

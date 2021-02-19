@@ -335,6 +335,67 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     );
 
     scope0.insert(
+        define::ADD.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::arithmetic),
+        }
+    );
+    scope0.insert(
+        define::SUB.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::arithmetic),
+        }
+    );
+    scope0.insert(
+        define::MUL.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::arithmetic),
+        }
+    );
+    scope0.insert(
+        define::DIV.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::arithmetic),
+        }
+    );
+    scope0.insert(
+        define::REM.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::arithmetic),
+        }
+    );
+
+    scope0.insert(
         define::STRING.to_owned(),
         IdentifierValue {
             identifier_type: IdentifierType::TypeName,
@@ -422,4 +483,12 @@ pub fn init_identifier_storage() -> IdentifierStorage {
 
     is.push(scope0);
     is
+}
+pub fn init_context() -> Context {
+    let mut is = init_identifier_storage();
+    is.push(HashMap::new());
+    Context {
+        scope: 1,
+        identifier_storage: is,
+    }
 }

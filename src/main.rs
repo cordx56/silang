@@ -24,10 +24,7 @@ fn main() {
              .help("Input file to run"))
         .get_matches();
 
-    let mut ctx = silang::Context {
-        scope: 0,
-        identifier_storage: silang::run::init_identifier_storage(),
-    };
+    let mut ctx = silang::run::init_context();
 
     let mut buffer = String::new();
     match matches.value_of("FILE") {
@@ -63,7 +60,7 @@ fn main() {
             }
         },
         None => {
-            println!("SILang Interpreter Ver.{}", VERSION);
+            println!("SILang Interpreter Ver:{}", VERSION);
             loop {
                 if 0 < buffer.len() {
                     print!(". ");

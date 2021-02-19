@@ -45,6 +45,7 @@ pub enum FactorKind {
     String,
     Int,
     Float,
+    Bool,
     Expression,
 }
 
@@ -55,6 +56,7 @@ pub struct Factor {
     pub string: Option<String>,
     pub int: Option<i64>,
     pub float: Option<f64>,
+    pub bool: Option<bool>,
     pub expression: Option<Expression>,
 }
 

@@ -4,6 +4,7 @@ use super::{
     Expression,
     Statement,
 };
+use super::define;
 
 extern crate nom;
 
@@ -18,6 +19,7 @@ use nom::{
         line_ending,
     },
     bytes::complete::{
+        tag,
         is_not,
         escaped_transform,
         take_while_m_n,
@@ -152,8 +154,8 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
             ),
             |expr: Option<Expression>| -> Factor {
                 match expr {
-                    Some(e) => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, expression: Some(e) },
-                    None => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, expression: Some(Expression { factors: Vec::new() }) },
+                    Some(e) => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, bool: None, expression: Some(e) },
+                    None => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, bool: None, expression: Some(Expression { factors: Vec::new() }) },
                 }
             }
         )
@@ -164,7 +166,7 @@ pub fn identifier(s: &str) -> IResult<&str, Factor> {
     map(
         is_not(" \t\r\n(){}"),
         |identifier: &str| -> Factor {
-            Factor { kind: FactorKind::Identifier, name: Some(identifier.to_owned()), string: None, int: None, float: None, expression: None }
+            Factor { kind: FactorKind::Identifier, name: Some(identifier.to_owned()), string: None, int: None, float: None, bool: None, expression: None }
         }
     )(s)
 }
@@ -172,7 +174,7 @@ pub fn number(s: &str) -> IResult<&str, Factor> {
     map(
         double,
         |number: f64| -> Factor {
-            Factor { kind: FactorKind::Float, name: None, string: None, int: None, float: Some(number), expression: None }
+            Factor { kind: FactorKind::Float, name: None, string: None, int: None, float: Some(number), bool: None, expression: None }
         }
     )(s)
 }
@@ -197,11 +199,26 @@ pub fn string(s: &str) -> IResult<&str, Factor> {
             char('"'),
         ),
         |string: String| -> Factor {
-            Factor { kind: FactorKind::String, name: None, string: Some(string), int: None, float: None, expression: None }
+            Factor { kind: FactorKind::String, name: None, string: Some(string), int: None, float: None, bool: None, expression: None }
         }
     )(s)
 }
+/*
+pub fn bool(s: &str) -> IResult<&str, Factor> {
+    alt((
+        value(
+            Factor { kind: FactorKind::Bool, name: None, string: None, int: None, float: None, bool: Some(true), expression: None },
+            tag(define::TRUE),
+        ),
+        value(
+            Factor { kind: FactorKind::Bool, name: None, string: None, int: None, float: None, bool: Some(false), expression: None },
+            tag(define::FALSE),
+        ),
+    ))(s)
+}*/
 
+
+// Parse tree
 fn push_indent(buffer: &mut String, depth: usize) {
     for _ in 0..depth {
         buffer.push_str("    ");
