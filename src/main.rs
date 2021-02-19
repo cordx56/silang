@@ -18,7 +18,7 @@ static VERSION: &str = "0.2.0-beta";
 fn main() {
     let matches = App::new("SILang Interpreter")
         .version(VERSION)
-        .author("Kaoru Saso <cordx56@cordx.net>")
+        .author("Kaoru Chisen <cordx56@cordx.net>")
         .about("Run SILang code")
         .arg(Arg::with_name("FILE")
              .help("Input file to run"))

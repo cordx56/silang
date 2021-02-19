@@ -27,6 +27,7 @@ pub static MUL: &str = "*";
 pub static DIV: &str = "/";
 pub static REM: &str = "%";
 
+pub static EQUAL: &str = "==";
 pub static GREATER: &str = ">";
 pub static LESS: &str = "<";
 pub static GREATER_EQUAL: &str = ">=";
