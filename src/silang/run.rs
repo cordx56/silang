@@ -116,12 +116,19 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
     let mut is_loop = false;
     loop {
         let mut res = Vec::new();
-        // User Defined Function Assignment
-        let first_factor = &statement.expression.factors[0];
-        if statement.expression.factors.len() == 2 &&
-            first_factor.kind == FactorKind::Identifier &&
-                first_factor.name.as_ref().unwrap() == define::ASSIGN {
-            let mut second_factor = statement.expression.factors[1].clone();
+        match eval(ctx, &statement.expression) {
+            Ok(er) => {
+                res = er;
+            },
+            Err(e) => {
+                return Err(e)
+            },
+        }
+        // User Defined Function Definition
+        if res.len() == 2 &&
+            res[0].kind == FactorKind::Identifier &&
+                res[0].name.as_ref().unwrap() == define::FUNCTION_DEFINITION {
+            let mut second_factor = res[1].clone();
             if second_factor.kind == FactorKind::Expression {
                 match eval(ctx, second_factor.expression.as_ref().unwrap()) {
                     Ok(er) => {
@@ -168,13 +175,13 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                     return Err("Identifier not defined".to_owned())
                 },
             }
-        // if statement
-        } else if statement.expression.factors.len() == 2 &&
-            first_factor.kind == FactorKind::Identifier &&
-                (first_factor.name.as_ref().unwrap() == define::IF ||
-                first_factor.name.as_ref().unwrap() == define::LOOP) {
-            let if_loop = first_factor.name.as_ref().unwrap();
-            let mut second_factor = statement.expression.factors[1].clone();
+        // if / loop statement
+        } else if res.len() == 2 &&
+            res[0].kind == FactorKind::Identifier &&
+                (res[0].name.as_ref().unwrap() == define::IF ||
+                res[0].name.as_ref().unwrap() == define::LOOP) {
+            let if_loop_str = res[0].name.as_ref().unwrap();
+            let mut second_factor = res[1].clone();
             if second_factor.kind == FactorKind::Expression {
                 match eval(ctx, second_factor.expression.as_ref().unwrap()) {
                     Ok(er) => {
@@ -198,7 +205,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                         return Err("Target value is not bool".to_owned())
                     }
                     if iv.1.bool.unwrap() {
-                        if if_loop == define::LOOP {
+                        if if_loop_str == define::LOOP {
                             is_loop = true;
                         }
                     } else {
@@ -210,15 +217,9 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                 },
             }
         }
+
         // Normal Statement
-        match eval(ctx, &statement.expression) {
-            Ok(er) => {
-                res = er;
-            },
-            Err(e) => {
-                return Err(e)
-            },
-        }
+        // Execute statements
         ctx.push_new();
         for s in &statement.statements {
             match exec(ctx, s) {

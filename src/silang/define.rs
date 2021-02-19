@@ -14,6 +14,7 @@ pub static FALSE: &str = "false";
 // Functions
 pub static DECAS: &str = "decas";
 pub static DECAS_ALIAS: &str = "::";
+pub static FUNCTION_DEFINITION: &str = "f:";
 pub static ASSIGN: &str = "=";
 pub static RETURN: &str = "return";
 pub static PRINT: &str = "print";
