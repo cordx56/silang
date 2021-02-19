@@ -117,9 +117,10 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
     loop {
         let mut res = Vec::new();
         // User Defined Function Assignment
+        let first_factor = &statement.expression.factors[0];
         if statement.expression.factors.len() == 2 &&
-            statement.expression.factors[0].kind == FactorKind::Identifier &&
-                statement.expression.factors[0].name.as_ref().unwrap() == define::ASSIGN {
+            first_factor.kind == FactorKind::Identifier &&
+                first_factor.name.as_ref().unwrap() == define::ASSIGN {
             let mut second_factor = statement.expression.factors[1].clone();
             if second_factor.kind == FactorKind::Expression {
                 match eval(ctx, second_factor.expression.as_ref().unwrap()) {
@@ -169,10 +170,10 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
             }
         // if statement
         } else if statement.expression.factors.len() == 2 &&
-            statement.expression.factors[0].kind == FactorKind::Identifier &&
-                (statement.expression.factors[0].name.as_ref().unwrap() == define::IF ||
-                statement.expression.factors[0].name.as_ref().unwrap() == define::LOOP) {
-            let if_loop = statement.expression.factors[0].name.as_ref().unwrap();
+            first_factor.kind == FactorKind::Identifier &&
+                (first_factor.name.as_ref().unwrap() == define::IF ||
+                first_factor.name.as_ref().unwrap() == define::LOOP) {
+            let if_loop = first_factor.name.as_ref().unwrap();
             let mut second_factor = statement.expression.factors[1].clone();
             if second_factor.kind == FactorKind::Expression {
                 match eval(ctx, second_factor.expression.as_ref().unwrap()) {

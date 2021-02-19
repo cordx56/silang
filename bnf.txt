@@ -1,4 +1,0 @@
-Program := Statement*
-Statement := Expression "\n" | Expression? "{" Statement* "}"
-Expression := Factor (Whitespace+ Factor)*
-Factor := String | Number | Identifier | "(" Expression ")"
