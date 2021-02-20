@@ -22,6 +22,10 @@ fn main() {
         .about("Run SILang code")
         .arg(Arg::with_name("FILE")
              .help("Input file to run"))
+        .arg(Arg::with_name("parseTree")
+             .long("parseTree")
+             .help("Print parse tree")
+             .takes_value(false))
         .get_matches();
 
     let mut ctx = silang::run::init_context();
@@ -51,7 +55,11 @@ fn main() {
             // println!("{:?}", parse_result);
             match parse_result {
                 Ok(program) => {
-                    silang::run::run(&mut ctx, program.1).ok();
+                    if matches.is_present("parseTree") {
+                        println!("{}", silang::parser::parse_tree(program.1));
+                    } else {
+                        silang::run::run(&mut ctx, program.1).ok();
+                    }
                 },
                 Err(e) => {
                     eprintln!("Parse error");
@@ -74,17 +82,21 @@ fn main() {
                 }
                 match silang::parser::statement_all_consuming(&buffer) {
                     Ok (s) => {
-                        match silang::run::exec(&mut ctx, &s.1) {
-                            Ok(fs) => {
-                                for f in fs {
-                                    silang::builtin::print_factor(&mut ctx, f).ok();
-                                    print!(" ");
-                                }
-                                println!("");
-                            },
-                            Err(e) => {
-                                eprintln!("{}", e);
-                            },
+                        if matches.is_present("parseTree") {
+                            println!("{}", silang::parser::parse_tree_statement(s.1, 0));
+                        } else {
+                            match silang::run::exec(&mut ctx, &s.1) {
+                                Ok(fs) => {
+                                    for f in fs {
+                                        silang::builtin::print_factor(&mut ctx, f).ok();
+                                        print!(" ");
+                                    }
+                                    println!("");
+                                },
+                                Err(e) => {
+                                    eprintln!("{}", e);
+                                },
+                            }
                         }
                         buffer = String::new();
                     },
