@@ -154,12 +154,11 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
                     )
                 ),
             )),
-            |(identifier, expr)| -> Factor {
-                let mut ident = identifier.clone();
+            |(mut identifier, expr)| -> Factor {
                 if expr.is_some() {
-                    ident.expression = Some(expr.unwrap().1);
+                    identifier.expression = Some(expr.unwrap().1);
                 }
-                ident
+                identifier
             }
         ),
         map(

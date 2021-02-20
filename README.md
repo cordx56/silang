@@ -21,5 +21,5 @@ $ cargo run file.sil
 Program := Statement*
 Statement := Expression "\n" | Expression? "{" Statement* "}"
 Expression := Factor (Whitespace+ Factor)*
-Factor := String | Number | Identifier | "(" Expression ")"
+Factor := String | Number | Identifier ("[" Expression "]")? | "(" Expression ")"
 ```
