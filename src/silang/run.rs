@@ -90,10 +90,8 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
                     Some(udf) => {
                         let udf_scope = udf.scope;
                         let udf_statement = udf.statement.clone();
-                        ctx.push_new();
                         match exec(ctx, &udf_statement) {
                             Ok(er) => {
-                                ctx.pop();
                                 return Ok(er);
                             },
                             Err(e) => {
@@ -212,7 +210,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                     }
                 },
                 None => {
-                    return Err("Identifier not defined".to_owned())
+                    return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
                 },
             }
         }
