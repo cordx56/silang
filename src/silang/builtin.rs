@@ -54,7 +54,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                         return Err("lval must be identifier".to_owned())
                     }
                     if ctx.identifier_storage[ctx.scope].contains_key(f.name.as_ref().unwrap()) {
-                        return Err("Redefinition not supported".to_owned())
+                        return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
                     }
                     ident_name_vec.push(f.name.as_ref().unwrap().to_owned());
                     return_vec.push(f);
@@ -69,7 +69,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             return Err("lval must be identifier".to_owned())
         }
         if ctx.identifier_storage[ctx.scope].contains_key(lval.name.as_ref().unwrap()) {
-            return Err("Redefinition not supported".to_owned())
+            return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
         }
         ident_name_vec.push(lval.name.as_ref().unwrap().to_owned());
         return_vec.push(lval.clone());

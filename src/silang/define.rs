@@ -41,5 +41,6 @@ pub static LOOP: &str = "loop";
 
 // Error messages
 pub static IDENTIFIER_NOT_DEFINED: &str = "Identifier not defined";
+pub static REDEFINITION_NOT_SUPPORTED: &str = "Redefinition not supported";
 pub static UNABLE_TO_CAST: &str = "Unable to cast";
 pub static UNSUPPORTED_OPERATION: &str = "Unsupported operation";

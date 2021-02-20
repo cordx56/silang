@@ -146,35 +146,30 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                 return Err("lval must be identifier".to_owned())
             }
             let second_factor_name = second_factor.name.as_ref().unwrap();
-            match search_identifier(ctx, second_factor_name) {
-                Some(iv) => {
-                    if iv.1.identifier_type != IdentifierType::Function {
-                        return Err("lval is not function".to_owned())
-                    }
-                    let scope = iv.0;
-                    assign_identifier(ctx, scope, second_factor_name, IdentifierValue{
-                        identifier_type: IdentifierType::Function,
-                        string: None,
-                        int: None,
-                        float: None,
-                        bool: None,
-                        user_defined_function: Some(
-                            UserDefinedFunction {
-                                scope: ctx.scope + 1,
-                                statement: Statement {
-                                    expression: Expression { factors: Vec::new() },
-                                    statements: statement.statements.clone(),
-                                }
-                            }
-                        ),
-                        function: None,
-                    });
-                    return Ok(vec![second_factor])
-                },
-                None => {
-                    return Err("Identifier not defined".to_owned())
-                },
+            if ctx.identifier_storage[ctx.scope].contains_key(second_factor_name) {
+                return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
             }
+            ctx.identifier_storage[ctx.scope].insert(
+                second_factor_name.clone(),
+                IdentifierValue{
+                    identifier_type: IdentifierType::Function,
+                    string: None,
+                    int: None,
+                    float: None,
+                    bool: None,
+                    user_defined_function: Some(
+                        UserDefinedFunction {
+                            scope: ctx.scope + 1,
+                            statement: Statement {
+                                expression: Expression { factors: Vec::new() },
+                                statements: statement.statements.clone(),
+                            }
+                        }
+                    ),
+                    function: None,
+                }
+            );
+            return Ok(vec![second_factor])
         // if / loop statement
         } else if res.len() == 2 &&
             res[0].kind == FactorKind::Identifier &&
