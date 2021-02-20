@@ -58,7 +58,10 @@ fn main() {
                     if matches.is_present("parseTree") {
                         println!("{}", silang::parser::parse_tree(program.1));
                     } else {
-                        silang::run::run(&mut ctx, program.1).ok();
+                        match silang::run::run(&mut ctx, program.1) {
+                            Ok(_) => {},
+                            Err(e) => eprintln!("{}", e),
+                        }
                     }
                 },
                 Err(e) => {
