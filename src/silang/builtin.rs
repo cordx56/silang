@@ -80,69 +80,36 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
     }
     for n in 0..ident_name_vec.len() {
         if type_name_vec[n] == define::STRING {
+            let mut iv = IdentifierValue::new();
+            iv.identifier_type = IdentifierType::String;
+            iv.string = Some("".to_owned());
             ctx.identifier_storage[ctx.scope].insert(
                 ident_name_vec[n].clone(),
-                IdentifierValue {
-                    identifier_type: IdentifierType::String,
-                    string: Some("".to_owned()),
-                    int: None,
-                    float: None,
-                    bool: None,
-                    user_defined_function: None,
-                    function: None,
-                }
+                iv,
             );
         } else if type_name_vec[n] == define::INT {
+            let mut iv = IdentifierValue::new();
+            iv.identifier_type = IdentifierType::Int;
+            iv.int = Some(0);
             ctx.identifier_storage[ctx.scope].insert(
                 ident_name_vec[n].clone(),
-                IdentifierValue {
-                    identifier_type: IdentifierType::Int,
-                    string: None,
-                    int: Some(0),
-                    float: None,
-                    bool: None,
-                    user_defined_function: None,
-                    function: None,
-                }
+                iv,
             );
         } else if type_name_vec[n] == define::FLOAT {
+            let mut iv = IdentifierValue::new();
+            iv.identifier_type = IdentifierType::Float;
+            iv.float = Some(0.0);
             ctx.identifier_storage[ctx.scope].insert(
                 ident_name_vec[n].clone(),
-                IdentifierValue {
-                    identifier_type: IdentifierType::Float,
-                    string: None,
-                    int: None,
-                    float: Some(0.0),
-                    bool: None,
-                    user_defined_function: None,
-                    function: None,
-                }
+                iv,
             );
         } else if type_name_vec[n] == define::BOOL {
+            let mut iv = IdentifierValue::new();
+            iv.identifier_type = IdentifierType::Bool;
+            iv.bool = Some(false);
             ctx.identifier_storage[ctx.scope].insert(
                 ident_name_vec[n].clone(),
-                IdentifierValue {
-                    identifier_type: IdentifierType::Bool,
-                    string: None,
-                    int: None,
-                    float: None,
-                    bool: Some(false),
-                    user_defined_function: None,
-                    function: None,
-                }
-            );
-        } else if type_name_vec[n] == define::FUNCTION {
-            ctx.identifier_storage[ctx.scope].insert(
-                ident_name_vec[n].clone(),
-                IdentifierValue {
-                    identifier_type: IdentifierType::Function,
-                    string: None,
-                    int: None,
-                    float: None,
-                    bool: None,
-                    user_defined_function: None,
-                    function: None,
-                }
+                iv,
             );
         } else {
             return Err("Unknown type".to_owned())
@@ -190,15 +157,7 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
         return Err("lval and rval length must be equal".to_owned())
     }
     for n in 0..left_factors.len() {
-        let mut right_identifier_value = IdentifierValue {
-            identifier_type: IdentifierType::None,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: None,
-        };
+        let mut right_identifier_value = IdentifierValue::new();
         if right_factors[n].kind == FactorKind::Identifier {
             match search_identifier(ctx, right_factors[n].name.as_ref().unwrap()) {
                 Some(iv) => {

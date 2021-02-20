@@ -3,14 +3,15 @@ pub static EXPRESSION_OPEN: &str = "(";
 pub static EXPRESSION_CLOSE: &str = ")";
 pub static BLOCK_OPEN: &str = "{";
 pub static BLOCK_CLOSE: &str = "}";
-pub static PARSER_NOT_IDENTIFIER: &str = " \t\r\n(){}";
+pub static INDEX_OPEN: &str = "[";
+pub static INDEX_CLOSE: &str = "]";
+pub static PARSER_NOT_IDENTIFIER: &str = " \t\r\n(){}[]";
 
 // Type name
 pub static STRING: &str = "string";
 pub static INT: &str = "int";
 pub static FLOAT: &str = "float";
 pub static BOOL: &str = "bool";
-pub static FUNCTION: &str = "function";
 
 // Variables
 pub static TRUE: &str = "true";

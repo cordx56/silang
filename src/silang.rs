@@ -31,12 +31,24 @@ pub struct IdentifierValue {
     pub bool: Option<bool>,
     pub user_defined_function: Option<UserDefinedFunction>,
     pub function: Option<fn (&mut Context, Vec<Factor>) -> Result<Vec<Factor>, String>>,
+    pub vector: Option<Vec<IdentifierValue>>,
+    pub map: Option<HashMap<String, IdentifierValue>>,
 }
 
-pub struct Identifier {
-    pub identifier_type: IdentifierType,
-    pub name: String,
-    pub value: IdentifierValue,
+impl IdentifierValue {
+    pub fn new() -> IdentifierValue {
+        IdentifierValue {
+            identifier_type: IdentifierType::None,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: None,
+            vector: None,
+            map: None,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

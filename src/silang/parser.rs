@@ -139,7 +139,29 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
     alt((
         string,
         number,
-        identifier,
+        map(
+            permutation((
+                identifier,
+                opt(
+                    delimited(
+                        tag(define::INDEX_OPEN),
+                        permutation((
+                            space0,
+                            expression,
+                            space0,
+                        )),
+                        tag(define::INDEX_CLOSE),
+                    )
+                ),
+            )),
+            |(identifier, expr)| -> Factor {
+                let mut ident = identifier.clone();
+                if expr.is_some() {
+                    ident.expression = Some(expr.unwrap().1);
+                }
+                ident
+            }
+        ),
         map(
             delimited(
                 tag(define::EXPRESSION_OPEN),

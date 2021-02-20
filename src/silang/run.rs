@@ -151,25 +151,20 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
             if ctx.identifier_storage[ctx.scope].contains_key(second_factor_name) {
                 return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
             }
+            let mut iv = IdentifierValue::new();
+            iv.identifier_type = IdentifierType::Function;
+            iv.user_defined_function = Some(
+                UserDefinedFunction {
+                    scope: ctx.scope + 1,
+                    statement: Statement {
+                        expression: Expression { factors: Vec::new() },
+                        statements: statement.statements.clone(),
+                    }
+                }
+            );
             ctx.identifier_storage[ctx.scope].insert(
                 second_factor_name.clone(),
-                IdentifierValue{
-                    identifier_type: IdentifierType::Function,
-                    string: None,
-                    int: None,
-                    float: None,
-                    bool: None,
-                    user_defined_function: Some(
-                        UserDefinedFunction {
-                            scope: ctx.scope + 1,
-                            statement: Statement {
-                                expression: Expression { factors: Vec::new() },
-                                statements: statement.statements.clone(),
-                            }
-                        }
-                    ),
-                    function: None,
-                }
+                iv
             );
             return Ok(vec![second_factor])
         // if / loop statement
@@ -285,238 +280,118 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     let mut is = Vec::new();
     let mut scope0 = HashMap::new();
 
+    let mut iv_decas = IdentifierValue::new();
+    iv_decas.identifier_type = IdentifierType::Function;
+    iv_decas.function = Some(builtin::define_variable);
     scope0.insert(
         define::DECAS_ALIAS.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::define_variable),
-        }
+        iv_decas.clone(),
     );
     scope0.insert(
         define::DECAS.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::define_variable),
-        }
+        iv_decas.clone(),
     );
+    let mut iv_assign = IdentifierValue::new();
+    iv_assign.identifier_type = IdentifierType::Function;
+    iv_assign.function = Some(builtin::assign_variable);
     scope0.insert(
         define::ASSIGN.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::assign_variable),
-        }
+        iv_assign,
     );
 
+    let mut iv_print = IdentifierValue::new();
+    iv_print.identifier_type = IdentifierType::Function;
+    iv_print.function = Some(builtin::print);
     scope0.insert(
         define::PRINT.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::print),
-        }
+        iv_print.clone(),
     );
     scope0.insert(
         define::PRINTLN.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::print),
-        }
+        iv_print.clone(),
     );
+    let mut iv_value = IdentifierValue::new();
+    iv_value.identifier_type = IdentifierType::Function;
+    iv_value.function = Some(builtin::value);
     scope0.insert(
         define::VALUE.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::value),
-        }
+        iv_value,
     );
 
+    let mut iv_as = IdentifierValue::new();
+    iv_as.identifier_type = IdentifierType::Function;
+    iv_as.function = Some(builtin::as_cast);
     scope0.insert(
         define::AS.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::as_cast),
-        }
+        iv_as,
     );
 
+    let mut iv_arithmetic = IdentifierValue::new();
+    iv_arithmetic.identifier_type = IdentifierType::Function;
+    iv_arithmetic.function = Some(builtin::arithmetic);
     scope0.insert(
         define::ADD.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::arithmetic),
-        }
+        iv_arithmetic.clone(),
     );
     scope0.insert(
         define::SUB.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::arithmetic),
-        }
+        iv_arithmetic.clone(),
     );
     scope0.insert(
         define::MUL.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::arithmetic),
-        }
+        iv_arithmetic.clone(),
     );
     scope0.insert(
         define::DIV.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::arithmetic),
-        }
+        iv_arithmetic.clone(),
     );
     scope0.insert(
         define::REM.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Function,
-            string: None,
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: Some(builtin::arithmetic),
-        }
+        iv_arithmetic.clone(),
     );
 
+    let mut iv_string = IdentifierValue::new();
+    iv_string.identifier_type = IdentifierType::TypeName;
+    iv_string.string = Some(define::STRING.to_owned());
     scope0.insert(
         define::STRING.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::TypeName,
-            string: Some(define::STRING.to_owned()),
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: None,
-        }
+        iv_string,
     );
+    let mut iv_int = IdentifierValue::new();
+    iv_int.identifier_type = IdentifierType::TypeName;
+    iv_int.string = Some(define::INT.to_owned());
     scope0.insert(
         define::INT.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::TypeName,
-            string: Some(define::INT.to_owned()),
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: None,
-        }
+        iv_int,
     );
+    let mut iv_float = IdentifierValue::new();
+    iv_float.identifier_type = IdentifierType::TypeName;
+    iv_float.string = Some(define::FLOAT.to_owned());
     scope0.insert(
         define::FLOAT.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::TypeName,
-            string: Some(define::FLOAT.to_owned()),
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: None,
-        }
+        iv_float,
     );
+    let mut iv_bool = IdentifierValue::new();
+    iv_bool.identifier_type = IdentifierType::TypeName;
+    iv_bool.string = Some(define::BOOL.to_owned());
     scope0.insert(
         define::BOOL.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::TypeName,
-            string: Some(define::BOOL.to_owned()),
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: None,
-        }
-    );
-    scope0.insert(
-        define::FUNCTION.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::TypeName,
-            string: Some(define::FUNCTION.to_owned()),
-            int: None,
-            float: None,
-            bool: None,
-            user_defined_function: None,
-            function: None,
-        }
+        iv_bool,
     );
 
+    let mut iv_true = IdentifierValue::new();
+    iv_true.identifier_type = IdentifierType::Bool;
+    iv_true.bool = Some(true);
     scope0.insert(
         define::TRUE.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Bool,
-            string: None,
-            int: None,
-            float: None,
-            bool: Some(true),
-            user_defined_function: None,
-            function: None,
-        }
+        iv_true,
     );
+    let mut iv_false = IdentifierValue::new();
+    iv_false.identifier_type = IdentifierType::Bool;
+    iv_false.bool = Some(false);
     scope0.insert(
         define::FALSE.to_owned(),
-        IdentifierValue {
-            identifier_type: IdentifierType::Bool,
-            string: None,
-            int: None,
-            float: None,
-            bool: Some(false),
-            user_defined_function: None,
-            function: None,
-        }
+        iv_false,
     );
 
     is.push(scope0);
