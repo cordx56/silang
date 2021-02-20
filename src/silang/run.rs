@@ -235,6 +235,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                                                 }
                                             },
                                             Err(e) => {
+                                                ctx.pop();
                                                 return Err(e)
                                             }
                                         }
@@ -242,16 +243,20 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                                         ret.push(er[n].clone());
                                     }
                                 }
+                                ctx.pop();
                                 return Ok(ret)
                             } else if first_factor.name.as_ref().unwrap() == define::BREAK {
+                                ctx.pop();
                                 return Ok(Vec::new());
                             } else if first_factor.name.as_ref().unwrap() == define::CONTINUE {
+                                ctx.pop();
                                 continue 'root;
                             }
                         }
                         res = er;
                     },
                     Err(e) => {
+                        ctx.pop();
                         return Err(e)
                     }
                 }
