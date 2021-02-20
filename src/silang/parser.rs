@@ -19,6 +19,7 @@ use nom::{
         line_ending,
     },
     bytes::complete::{
+        tag,
         is_not,
         escaped_transform,
         take_while_m_n,
@@ -87,7 +88,7 @@ pub fn statement(s: &str) -> IResult<&str, Statement> {
                 ),
                 space0,
                 delimited(
-                    char('{'),
+                    tag(define::BLOCK_OPEN),
                     permutation((
                         multispace0,
                         many0(
@@ -95,7 +96,7 @@ pub fn statement(s: &str) -> IResult<&str, Statement> {
                         ),
                         multispace0,
                     )),
-                    char('}'),
+                    tag(define::BLOCK_CLOSE),
                 ),
                 multispace0,
             )),
@@ -141,7 +142,7 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
         identifier,
         map(
             delimited(
-                char('('),
+                tag(define::EXPRESSION_OPEN),
                 delimited(
                     multispace0,
                     opt(
@@ -149,7 +150,7 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
                     ),
                     multispace0,
                 ),
-                char(')'),
+                tag(define::EXPRESSION_CLOSE),
             ),
             |expr: Option<Expression>| -> Factor {
                 match expr {
@@ -163,7 +164,7 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
 
 pub fn identifier(s: &str) -> IResult<&str, Factor> {
     map(
-        is_not(" \t\r\n(){}"),
+        is_not(define::PARSER_NOT_IDENTIFIER),
         |identifier: &str| -> Factor {
             Factor { kind: FactorKind::Identifier, name: Some(identifier.to_owned()), string: None, int: None, float: None, bool: None, expression: None }
         }

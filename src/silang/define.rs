@@ -1,3 +1,9 @@
+// Special
+pub static EXPRESSION_OPEN: &str = "(";
+pub static EXPRESSION_CLOSE: &str = ")";
+pub static BLOCK_OPEN: &str = "{";
+pub static BLOCK_CLOSE: &str = "}";
+pub static PARSER_NOT_IDENTIFIER: &str = " \t\r\n(){}";
 
 // Type name
 pub static STRING: &str = "string";
