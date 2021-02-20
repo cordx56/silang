@@ -19,7 +19,6 @@ use nom::{
         line_ending,
     },
     bytes::complete::{
-        tag,
         is_not,
         escaped_transform,
         take_while_m_n,
@@ -203,19 +202,6 @@ pub fn string(s: &str) -> IResult<&str, Factor> {
         }
     )(s)
 }
-/*
-pub fn bool(s: &str) -> IResult<&str, Factor> {
-    alt((
-        value(
-            Factor { kind: FactorKind::Bool, name: None, string: None, int: None, float: None, bool: Some(true), expression: None },
-            tag(define::TRUE),
-        ),
-        value(
-            Factor { kind: FactorKind::Bool, name: None, string: None, int: None, float: None, bool: Some(false), expression: None },
-            tag(define::FALSE),
-        ),
-    ))(s)
-}*/
 
 
 // Parse tree
@@ -233,6 +219,8 @@ pub fn parse_tree(stmts: Vec<Statement>) -> String {
 }
 pub fn parse_tree_statement(stmt: Statement, depth: usize) -> String {
     let mut buffer = String::new();
+    push_indent(&mut buffer, depth);
+    buffer.push_str("Statement: \n");
     buffer.push_str(&parse_tree_expression(stmt.expression, depth));
     for s in stmt.statements {
         buffer.push_str(&parse_tree_statement(s, depth + 1));
@@ -241,8 +229,10 @@ pub fn parse_tree_statement(stmt: Statement, depth: usize) -> String {
 }
 pub fn parse_tree_expression(expr: Expression, depth: usize) -> String {
     let mut buffer = String::new();
+    push_indent(&mut buffer, depth);
+    buffer.push_str("Expression: \n");
     for f in expr.factors {
-        buffer.push_str(&parse_tree_factor(f, depth));
+        buffer.push_str(&parse_tree_factor(f, depth + 1));
     }
     buffer
 }
@@ -259,9 +249,9 @@ pub fn parse_tree_factor(factor: Factor, depth: usize) -> String {
     } else if factor.kind == FactorKind::String {
         buffer.push_str("String\n");
         push_indent(&mut buffer, depth);
-        buffer.push_str("        ");
+        buffer.push_str("        \"");
         buffer.push_str(&factor.string.unwrap());
-        buffer.push_str("\n");
+        buffer.push_str("\"\n");
     } else if factor.kind == FactorKind::Int {
         buffer.push_str("Int\n");
         push_indent(&mut buffer, depth);
@@ -277,7 +267,6 @@ pub fn parse_tree_factor(factor: Factor, depth: usize) -> String {
     } else if factor.kind == FactorKind::Expression {
         buffer.push_str("Expression\n");
         buffer.push_str(&parse_tree_expression(factor.expression.unwrap(), depth + 1));
-        buffer.push_str("\n");
     }
     buffer
 }
