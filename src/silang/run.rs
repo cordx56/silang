@@ -42,7 +42,7 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
     if expr.factors.len() == 0 {
         return Ok(Vec::new())
     }
-    let func = &expr.factors[0];
+    let mut func = &expr.factors[0];
     let mut factors = Vec::new();
     if func.kind == FactorKind::Expression {
         match eval(ctx, func.expression.as_ref().unwrap()) {
@@ -72,8 +72,12 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
     if factors.len() == 0 {
         return Ok(factors)
     }
+    func = &factors[0];
+    if func.kind != FactorKind::Identifier {
+        return Ok(factors)
+    }
 
-    match search_identifier(ctx, factors[0].name.as_ref().unwrap()) {
+    match search_identifier(ctx, func.name.as_ref().unwrap()) {
         Some(iv) => {
             if iv.1.identifier_type != IdentifierType::Function {
                 return Ok(expr.factors.clone())
@@ -98,7 +102,7 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
                         }
                     },
                     None => {
-                        return Err("Identifier is not function!".to_owned())
+                        return Err("Identifier is not function".to_owned())
                     },
                 },
             }
@@ -114,7 +118,7 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
 
 pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, String> {
     let mut is_loop = false;
-    loop {
+    'root: loop {
         let mut res = Vec::new();
         match eval(ctx, &statement.expression) {
             Ok(er) => {
@@ -215,25 +219,47 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
 
         // Normal Statement
         // Execute statements
-        ctx.push_new();
-        for s in &statement.statements {
-            match exec(ctx, s) {
-                Ok(er) => {
-                    if 0 < er.len() && er[0].kind == FactorKind::Identifier && er[0].name.as_ref().unwrap() == define::RETURN {
-                        let mut ret = Vec::new();
-                        for n in 1..er.len() {
-                            ret.push(er[n].clone());
+        if 0 < statement.statements.len() {
+            ctx.push_new();
+            for s in &statement.statements {
+                match exec(ctx, s) {
+                    Ok(er) => {
+                        if 0 < er.len() && er[0].kind == FactorKind::Identifier {
+                            let first_factor = &er[0];
+                            if first_factor.name.as_ref().unwrap() == define::RETURN {
+                                let mut ret = Vec::new();
+                                for n in 1..er.len() {
+                                    if er[n].kind == FactorKind::Expression {
+                                        match eval(ctx, er[n].expression.as_ref().unwrap()) {
+                                            Ok(er2) => {
+                                                for f in er2 {
+                                                    ret.push(f);
+                                                }
+                                            },
+                                            Err(e) => {
+                                                return Err(e)
+                                            }
+                                        }
+                                    } else {
+                                        ret.push(er[n].clone());
+                                    }
+                                }
+                                return Ok(ret)
+                            } else if first_factor.name.as_ref().unwrap() == define::BREAK {
+                                return Ok(Vec::new());
+                            } else if first_factor.name.as_ref().unwrap() == define::CONTINUE {
+                                continue 'root;
+                            }
                         }
-                        return Ok(ret)
+                        res = er;
+                    },
+                    Err(e) => {
+                        return Err(e)
                     }
-                    res = er;
-                },
-                Err(e) => {
-                    return Err(e)
                 }
             }
+            ctx.pop();
         }
-        ctx.pop();
         if !is_loop {
             return Ok(res);
         }
@@ -315,6 +341,18 @@ pub fn init_identifier_storage() -> IdentifierStorage {
             bool: None,
             user_defined_function: None,
             function: Some(builtin::print),
+        }
+    );
+    scope0.insert(
+        define::VALUE.to_owned(),
+        IdentifierValue {
+            identifier_type: IdentifierType::Function,
+            string: None,
+            int: None,
+            float: None,
+            bool: None,
+            user_defined_function: None,
+            function: Some(builtin::value),
         }
     );
 

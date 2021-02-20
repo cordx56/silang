@@ -17,8 +17,11 @@ pub static DECAS_ALIAS: &str = "::";
 pub static FUNCTION_DEFINITION: &str = "f:";
 pub static ASSIGN: &str = "=";
 pub static RETURN: &str = "return";
+pub static BREAK: &str = "break";
+pub static CONTINUE: &str = "continue";
 pub static PRINT: &str = "print";
 pub static PRINTLN: &str = "println";
+pub static VALUE: &str = "value";
 
 pub static AS: &str = "as";
 
@@ -42,5 +45,6 @@ pub static LOOP: &str = "loop";
 // Error messages
 pub static IDENTIFIER_NOT_DEFINED: &str = "Identifier not defined";
 pub static REDEFINITION_NOT_SUPPORTED: &str = "Redefinition not supported";
+pub static LVAL_MUST_BE_IDENTIFIER: &str = "lval must be identifier";
 pub static UNABLE_TO_CAST: &str = "Unable to cast";
 pub static UNSUPPORTED_OPERATION: &str = "Unsupported operation";

@@ -51,7 +51,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             Ok(er) => {
                 for f in er {
                     if f.kind != FactorKind::Identifier {
-                        return Err("lval must be identifier".to_owned())
+                        return Err(define::LVAL_MUST_BE_IDENTIFIER.to_owned())
                     }
                     if ctx.identifier_storage[ctx.scope].contains_key(f.name.as_ref().unwrap()) {
                         return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
@@ -66,7 +66,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
         }
     } else {
         if lval.kind != FactorKind::Identifier {
-            return Err("lval must be identifier".to_owned())
+            return Err(define::LVAL_MUST_BE_IDENTIFIER.to_owned())
         }
         if ctx.identifier_storage[ctx.scope].contains_key(lval.name.as_ref().unwrap()) {
             return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
@@ -367,6 +367,41 @@ pub fn identifier_value_to_factor(iv: &IdentifierValue) -> Result<Factor, String
         Err("Unable to cast from Identifier to Factor".to_owned())
     }
 }
+pub fn value(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+    let mut factors_to_value = Vec::new();
+    for n in 1..factors.len() {
+        if factors[n].kind == FactorKind::Expression {
+            match eval(ctx, factors[n].expression.as_ref().unwrap()) {
+                Ok(er) => {
+                    for f in er {
+                        factors_to_value.push(f);
+                    }
+                },
+                Err(e) => {
+                    return Err(e)
+                },
+            }
+        } else {
+            factors_to_value.push(factors[n].clone());
+        }
+    }
+    let mut res = Vec::new();
+    for f in factors_to_value {
+        if f.kind != FactorKind::Identifier {
+            return Err(define::LVAL_MUST_BE_IDENTIFIER.to_owned());
+        }
+        match search_identifier(ctx, f.name.as_ref().unwrap()) {
+            Some(iv) => {
+                match identifier_value_to_factor(iv.1) {
+                    Ok(fr) => res.push(fr),
+                    Err(e) => return Err(e),
+                }
+            },
+            None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
+        }
+    }
+    Ok(res)
+}
 
 pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
     let mut res = factor.clone();
@@ -384,7 +419,7 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                         expression: None,
                     };
                 },
-                Err(e) => {
+                Err(_) => {
                     return Err(define::UNABLE_TO_CAST.to_owned())
                 },
             }
@@ -401,7 +436,7 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                         expression: None,
                     };
                 },
-                Err(e) => {
+                Err(_) => {
                     return Err(define::UNABLE_TO_CAST.to_owned())
                 },
             }
