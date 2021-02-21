@@ -1,7 +1,5 @@
 use super::{
-    IdentifierType,
     UserDefinedFunction,
-    IdentifierValue,
     FactorKind,
     Factor,
     Expression,
@@ -15,7 +13,7 @@ use super::define;
 
 use std::collections::HashMap;
 
-pub fn search_identifier<'a>(ctx: &'a mut Context, name: &str) -> Option<(usize, &'a IdentifierValue)> {
+pub fn search_identifier<'a>(ctx: &'a mut Context, name: &str) -> Option<(usize, &'a Factor)> {
     let mut scope = ctx.scope;
     loop {
         if ctx.identifier_storage[scope].contains_key(name) {
@@ -28,12 +26,16 @@ pub fn search_identifier<'a>(ctx: &'a mut Context, name: &str) -> Option<(usize,
     }
 }
 
-pub fn assign_identifier(ctx: &mut Context, scope: usize, name: &str, iv: IdentifierValue) {
-    ctx.identifier_storage[scope].get_mut(name).unwrap().identifier_type = iv.identifier_type;
+pub fn assign_identifier(ctx: &mut Context, scope: usize, name: &str, iv: Factor) {
+    ctx.identifier_storage[scope].get_mut(name).unwrap().kind = iv.kind;
+    ctx.identifier_storage[scope].get_mut(name).unwrap().name = iv.name;
     ctx.identifier_storage[scope].get_mut(name).unwrap().string = iv.string;
     ctx.identifier_storage[scope].get_mut(name).unwrap().int = iv.int;
     ctx.identifier_storage[scope].get_mut(name).unwrap().float = iv.float;
     ctx.identifier_storage[scope].get_mut(name).unwrap().bool = iv.bool;
+    ctx.identifier_storage[scope].get_mut(name).unwrap().vector = iv.vector;
+    ctx.identifier_storage[scope].get_mut(name).unwrap().map = iv.map;
+    ctx.identifier_storage[scope].get_mut(name).unwrap().expression = iv.expression;
     ctx.identifier_storage[scope].get_mut(name).unwrap().user_defined_function = iv.user_defined_function;
     ctx.identifier_storage[scope].get_mut(name).unwrap().function = iv.function;
 }
@@ -79,7 +81,7 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
 
     match search_identifier(ctx, func.name.as_ref().unwrap()) {
         Some(iv) => {
-            if iv.1.identifier_type != IdentifierType::Function {
+            if iv.1.kind != FactorKind::Function {
                 return Ok(expr.factors.clone())
             }
             match iv.1.function {
@@ -151,8 +153,8 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
             if ctx.identifier_storage[ctx.scope].contains_key(second_factor_name) {
                 return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
             }
-            let mut iv = IdentifierValue::new();
-            iv.identifier_type = IdentifierType::Function;
+            let mut iv = Factor::new();
+            iv.kind = FactorKind::Function;
             iv.user_defined_function = Some(
                 UserDefinedFunction {
                     scope: ctx.scope + 1,
@@ -193,7 +195,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
             let second_factor_name = second_factor.name.as_ref().unwrap();
             match search_identifier(ctx, second_factor_name) {
                 Some(iv) => {
-                    if iv.1.identifier_type != IdentifierType::Bool {
+                    if iv.1.kind != FactorKind::Bool {
                         return Err("Target value is not bool".to_owned())
                     }
                     if iv.1.bool.unwrap() {
@@ -280,8 +282,8 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     let mut is = Vec::new();
     let mut scope0 = HashMap::new();
 
-    let mut iv_decas = IdentifierValue::new();
-    iv_decas.identifier_type = IdentifierType::Function;
+    let mut iv_decas = Factor::new();
+    iv_decas.kind = FactorKind::Function;
     iv_decas.function = Some(builtin::define_variable);
     scope0.insert(
         define::DECAS_ALIAS.to_owned(),
@@ -291,16 +293,16 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         define::DECAS.to_owned(),
         iv_decas.clone(),
     );
-    let mut iv_assign = IdentifierValue::new();
-    iv_assign.identifier_type = IdentifierType::Function;
+    let mut iv_assign = Factor::new();
+    iv_assign.kind = FactorKind::Function;
     iv_assign.function = Some(builtin::assign_variable);
     scope0.insert(
         define::ASSIGN.to_owned(),
         iv_assign,
     );
 
-    let mut iv_print = IdentifierValue::new();
-    iv_print.identifier_type = IdentifierType::Function;
+    let mut iv_print = Factor::new();
+    iv_print.kind = FactorKind::Function;
     iv_print.function = Some(builtin::print);
     scope0.insert(
         define::PRINT.to_owned(),
@@ -310,32 +312,32 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         define::PRINTLN.to_owned(),
         iv_print.clone(),
     );
-    let mut iv_value = IdentifierValue::new();
-    iv_value.identifier_type = IdentifierType::Function;
+    let mut iv_value = Factor::new();
+    iv_value.kind = FactorKind::Function;
     iv_value.function = Some(builtin::value);
     scope0.insert(
         define::VALUE.to_owned(),
         iv_value,
     );
 
-    let mut iv_make_vector = IdentifierValue::new();
-    iv_make_vector.identifier_type = IdentifierType::Function;
+    let mut iv_make_vector = Factor::new();
+    iv_make_vector.kind = FactorKind::Function;
     iv_make_vector.function = Some(builtin::make_vector);
     scope0.insert(
         define::MAKE_VECTOR.to_owned(),
         iv_make_vector,
     );
 
-   let mut iv_as = IdentifierValue::new();
-    iv_as.identifier_type = IdentifierType::Function;
+   let mut iv_as = Factor::new();
+    iv_as.kind = FactorKind::Function;
     iv_as.function = Some(builtin::as_cast);
     scope0.insert(
         define::AS.to_owned(),
         iv_as,
     );
 
-    let mut iv_arithmetic = IdentifierValue::new();
-    iv_arithmetic.identifier_type = IdentifierType::Function;
+    let mut iv_arithmetic = Factor::new();
+    iv_arithmetic.kind = FactorKind::Function;
     iv_arithmetic.function = Some(builtin::arithmetic);
     scope0.insert(
         define::ADD.to_owned(),
@@ -358,44 +360,44 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         iv_arithmetic.clone(),
     );
 
-    let mut iv_string = IdentifierValue::new();
-    iv_string.identifier_type = IdentifierType::TypeName;
+    let mut iv_string = Factor::new();
+    iv_string.kind = FactorKind::TypeName;
     iv_string.string = Some(define::STRING.to_owned());
     scope0.insert(
         define::STRING.to_owned(),
         iv_string,
     );
-    let mut iv_int = IdentifierValue::new();
-    iv_int.identifier_type = IdentifierType::TypeName;
+    let mut iv_int = Factor::new();
+    iv_int.kind = FactorKind::TypeName;
     iv_int.string = Some(define::INT.to_owned());
     scope0.insert(
         define::INT.to_owned(),
         iv_int,
     );
-    let mut iv_float = IdentifierValue::new();
-    iv_float.identifier_type = IdentifierType::TypeName;
+    let mut iv_float = Factor::new();
+    iv_float.kind = FactorKind::TypeName;
     iv_float.string = Some(define::FLOAT.to_owned());
     scope0.insert(
         define::FLOAT.to_owned(),
         iv_float,
     );
-    let mut iv_bool = IdentifierValue::new();
-    iv_bool.identifier_type = IdentifierType::TypeName;
+    let mut iv_bool = Factor::new();
+    iv_bool.kind = FactorKind::TypeName;
     iv_bool.string = Some(define::BOOL.to_owned());
     scope0.insert(
         define::BOOL.to_owned(),
         iv_bool,
     );
 
-    let mut iv_true = IdentifierValue::new();
-    iv_true.identifier_type = IdentifierType::Bool;
+    let mut iv_true = Factor::new();
+    iv_true.kind = FactorKind::Bool;
     iv_true.bool = Some(true);
     scope0.insert(
         define::TRUE.to_owned(),
         iv_true,
     );
-    let mut iv_false = IdentifierValue::new();
-    iv_false.identifier_type = IdentifierType::Bool;
+    let mut iv_false = Factor::new();
+    iv_false.kind = FactorKind::Bool;
     iv_false.bool = Some(false);
     scope0.insert(
         define::FALSE.to_owned(),
