@@ -12,6 +12,8 @@ pub static STRING: &str = "string";
 pub static INT: &str = "int";
 pub static FLOAT: &str = "float";
 pub static BOOL: &str = "bool";
+pub static VECTOR: &str = "vector";
+pub static MAP: &str = "map";
 
 // Variables
 pub static TRUE: &str = "true";
@@ -29,6 +31,8 @@ pub static CONTINUE: &str = "continue";
 pub static PRINT: &str = "print";
 pub static PRINTLN: &str = "println";
 pub static VALUE: &str = "value";
+pub static MAKE_VECTOR: &str = "make_vector";
+pub static MAKE_MAP: &str = "make_map";
 
 pub static AS: &str = "as";
 

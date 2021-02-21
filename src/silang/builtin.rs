@@ -290,6 +290,8 @@ pub fn identifier_value_to_factor(iv: &IdentifierValue) -> Result<Factor, String
             int: None,
             float: None,
             bool: None,
+            vector: None,
+            map: None,
             expression: None,
         })
     } else if iv.identifier_type == IdentifierType::Int {
@@ -300,6 +302,8 @@ pub fn identifier_value_to_factor(iv: &IdentifierValue) -> Result<Factor, String
             int: Some(iv.int.unwrap()),
             float: None,
             bool: None,
+            vector: None,
+            map: None,
             expression: None,
         })
     } else if iv.identifier_type == IdentifierType::Float {
@@ -310,6 +314,8 @@ pub fn identifier_value_to_factor(iv: &IdentifierValue) -> Result<Factor, String
             int: None,
             float: Some(iv.float.unwrap()),
             bool: None,
+            vector: None,
+            map: None,
             expression: None,
         })
     } else if iv.identifier_type == IdentifierType::Bool {
@@ -320,6 +326,8 @@ pub fn identifier_value_to_factor(iv: &IdentifierValue) -> Result<Factor, String
             int: None,
             float: None,
             bool: Some(iv.bool.unwrap()),
+            vector: None,
+            map: None,
             expression: None,
         })
     } else {
@@ -361,6 +369,36 @@ pub fn value(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Str
     }
     Ok(res)
 }
+pub fn make_vector(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+    let mut factors_to_vec = Vec::new();
+    for n in 1..factors.len() {
+        if factors[n].kind == FactorKind::Expression {
+            match eval(ctx, factors[n].expression.as_ref().unwrap()) {
+                Ok(er) => {
+                    for f in er {
+                        factors_to_vec.push(f);
+                    }
+                },
+                Err(e) => {
+                    return Err(e)
+                },
+            }
+        } else {
+            factors_to_vec.push(factors[n].clone());
+        }
+    }
+    Ok(vec![Factor {
+        kind: FactorKind::Vector,
+        name: None,
+        string: None,
+        int: None,
+        float: None,
+        bool: None,
+        vector: Some(factors_to_vec),
+        map: None,
+        expression: None,
+    }])
+}
 
 pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
     let mut res = factor.clone();
@@ -375,6 +413,8 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                         int: Some(num),
                         float: None,
                         bool: None,
+                        vector: None,
+                        map: None,
                         expression: None,
                     };
                 },
@@ -392,6 +432,8 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                         int: None,
                         float: Some(num),
                         bool: None,
+                        vector: None,
+                        map: None,
                         expression: None,
                     };
                 },
@@ -409,6 +451,8 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                 int: None,
                 float: None,
                 bool: None,
+                vector: None,
+                map: None,
                 expression: None,
             }
         } else if to == FactorKind::Float {
@@ -419,6 +463,8 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                 int: None,
                 float: Some(factor.int.unwrap() as f64),
                 bool: None,
+                vector: None,
+                map: None,
                 expression: None,
             }
         }
@@ -431,6 +477,8 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                 int: None,
                 float: None,
                 bool: None,
+                vector: None,
+                map: None,
                 expression: None,
             }
         } else if to == FactorKind::Int {
@@ -441,6 +489,8 @@ pub fn cast_factor(factor: &Factor, to: FactorKind) -> Result<Factor, String> {
                 int: Some(factor.float.unwrap() as i64),
                 float: None,
                 bool: None,
+                vector: None,
+                map: None,
                 expression: None,
             }
         }
@@ -546,6 +596,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                 int: None,
                 float: None,
                 bool: None,
+                vector: None,
+                map: None,
                 expression: None,
             })
         } else if lval.kind == FactorKind::Int {
@@ -557,6 +609,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: Some(lval.int.unwrap() + rval.int.unwrap()),
                     float: None,
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -567,6 +621,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some((lval.int.unwrap() as f64) + rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }
@@ -579,6 +635,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() + (rval.int.unwrap() as f64)),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -589,6 +647,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() + rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }
@@ -604,6 +664,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: Some(lval.int.unwrap() - rval.int.unwrap()),
                     float: None,
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -614,6 +676,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some((lval.int.unwrap() as f64) - rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }
@@ -626,6 +690,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() - (rval.int.unwrap() as f64)),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -636,6 +702,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() - rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }
@@ -651,6 +719,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: Some(lval.int.unwrap() * rval.int.unwrap()),
                     float: None,
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -661,6 +731,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some((lval.int.unwrap() as f64) * rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }
@@ -673,6 +745,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() * (rval.int.unwrap() as f64)),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -683,6 +757,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() * rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }
@@ -698,6 +774,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: Some(lval.int.unwrap() / rval.int.unwrap()),
                     float: None,
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -708,6 +786,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some((lval.int.unwrap() as f64) / rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }
@@ -720,6 +800,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() / (rval.int.unwrap() as f64)),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -730,6 +812,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() / rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }
@@ -745,6 +829,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: Some(lval.int.unwrap() % rval.int.unwrap()),
                     float: None,
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -755,6 +841,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some((lval.int.unwrap() as f64) % rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }
@@ -767,6 +855,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() % (rval.int.unwrap() as f64)),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             } else if rval.kind == FactorKind::Float {
@@ -777,6 +867,8 @@ pub fn factor_arithmetic(opr: &str, lval: &Factor, rval: &Factor) -> Result<Fact
                     int: None,
                     float: Some(lval.float.unwrap() % rval.float.unwrap()),
                     bool: None,
+                    vector: None,
+                    map: None,
                     expression: None,
                 })
             }

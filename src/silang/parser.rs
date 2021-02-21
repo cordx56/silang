@@ -175,8 +175,8 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
             ),
             |expr: Option<Expression>| -> Factor {
                 match expr {
-                    Some(e) => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, bool: None, expression: Some(e) },
-                    None => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, bool: None, expression: Some(Expression { factors: Vec::new() }) },
+                    Some(e) => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, bool: None, vector: None, map: None, expression: Some(e) },
+                    None => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, bool: None, vector: None, map: None, expression: Some(Expression { factors: Vec::new() }) },
                 }
             }
         )
@@ -187,7 +187,7 @@ pub fn identifier(s: &str) -> IResult<&str, Factor> {
     map(
         is_not(define::PARSER_NOT_IDENTIFIER),
         |identifier: &str| -> Factor {
-            Factor { kind: FactorKind::Identifier, name: Some(identifier.to_owned()), string: None, int: None, float: None, bool: None, expression: None }
+            Factor { kind: FactorKind::Identifier, name: Some(identifier.to_owned()), string: None, int: None, float: None, bool: None, vector: None, map: None, expression: None }
         }
     )(s)
 }
@@ -195,7 +195,7 @@ pub fn number(s: &str) -> IResult<&str, Factor> {
     map(
         double,
         |number: f64| -> Factor {
-            Factor { kind: FactorKind::Float, name: None, string: None, int: None, float: Some(number), bool: None, expression: None }
+            Factor { kind: FactorKind::Float, name: None, string: None, int: None, float: Some(number), bool: None, vector: None, map: None, expression: None }
         }
     )(s)
 }
@@ -220,7 +220,7 @@ pub fn string(s: &str) -> IResult<&str, Factor> {
             char('"'),
         ),
         |string: String| -> Factor {
-            Factor { kind: FactorKind::String, name: None, string: Some(string), int: None, float: None, bool: None, expression: None }
+            Factor { kind: FactorKind::String, name: None, string: Some(string), int: None, float: None, bool: None, vector: None, map: None, expression: None }
         }
     )(s)
 }

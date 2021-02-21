@@ -318,7 +318,15 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         iv_value,
     );
 
-    let mut iv_as = IdentifierValue::new();
+    let mut iv_make_vector = IdentifierValue::new();
+    iv_make_vector.identifier_type = IdentifierType::Function;
+    iv_make_vector.function = Some(builtin::make_vector);
+    scope0.insert(
+        define::MAKE_VECTOR.to_owned(),
+        iv_make_vector,
+    );
+
+   let mut iv_as = IdentifierValue::new();
     iv_as.identifier_type = IdentifierType::Function;
     iv_as.function = Some(builtin::as_cast);
     scope0.insert(
