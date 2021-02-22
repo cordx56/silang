@@ -388,6 +388,13 @@ pub fn init_identifier_storage() -> IdentifierStorage {
         define::BOOL.to_owned(),
         iv_bool,
     );
+    let mut iv_function = Factor::new();
+    iv_function.kind = FactorKind::TypeName;
+    iv_function.string = Some(define::FUNCTION.to_owned());
+    scope0.insert(
+        define::FUNCTION.to_owned(),
+        iv_function,
+    );
 
     let mut iv_true = Factor::new();
     iv_true.kind = FactorKind::Bool;

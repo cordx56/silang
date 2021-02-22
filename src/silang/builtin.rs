@@ -146,6 +146,13 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                 return_vec[n].name.as_ref().unwrap().to_owned(),
                 iv,
             );
+        } else if type_name_vec[n] == define::FUNCTION {
+            let mut iv = Factor::new();
+            iv.kind = FactorKind::Function;
+            ctx.identifier_storage[ctx.scope].insert(
+                return_vec[n].name.as_ref().unwrap().to_owned(),
+                iv,
+            );
         } else {
             return Err("Unknown type".to_owned())
         }

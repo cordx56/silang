@@ -14,6 +14,7 @@ pub static FLOAT: &str = "float";
 pub static BOOL: &str = "bool";
 pub static VECTOR: &str = "vector";
 pub static MAP: &str = "map";
+pub static FUNCTION: &str = "function";
 
 // Variables
 pub static TRUE: &str = "true";
