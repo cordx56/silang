@@ -83,13 +83,6 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
         return Ok(factors)
     }
 
-    let mut user_defined_function = UserDefinedFunction {
-        scope: Vec::new(),
-        statement: Statement {
-            expression: Expression { factors: Vec::new() },
-            statements: Vec::new(),
-        }
-    };
     match search_identifier(ctx, func.name.as_ref().unwrap()) {
         Some(iv) => {
             if iv.1.kind != FactorKind::Function {
@@ -101,7 +94,12 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
                 },
                 None => match &iv.1.user_defined_function {
                     Some(udf) => {
-                        user_defined_function = udf.clone();
+                        let user_defined_function = udf.clone();
+                        let backup_scope = ctx.scope.clone();
+                        ctx.scope = user_defined_function.scope;
+                        let res = exec(ctx, &user_defined_function.statement);
+                        ctx.scope = backup_scope;
+                        return res
                     },
                     None => {
                         return Err("Identifier is not function".to_owned())
@@ -113,11 +111,6 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
             return Ok(factors.clone())
         },
     };
-    let backup_scope = ctx.scope.clone();
-    ctx.scope = user_defined_function.scope;
-    let res = exec(ctx, &user_defined_function.statement);
-    ctx.scope = backup_scope;
-    res
 }
 
 pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, String> {
