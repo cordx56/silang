@@ -82,11 +82,11 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
     match search_identifier(ctx, func.name.as_ref().unwrap()) {
         Some(iv) => {
             if iv.1.kind != FactorKind::Function {
-                return Ok(expr.factors.clone())
+                return Ok(factors.clone())
             }
             match iv.1.function {
                 Some(f) => {
-                    return f(ctx, expr.factors.clone())
+                    return f(ctx, factors.clone())
                 },
                 None => match &iv.1.user_defined_function {
                     Some(udf) => {
@@ -108,7 +108,7 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
             }
         },
         None => {
-            return Ok(expr.factors.clone())
+            return Ok(factors.clone())
         },
     };
     //let ctx_scope = ctx.scope;
