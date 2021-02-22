@@ -14,15 +14,19 @@ use super::define;
 use std::collections::HashMap;
 
 pub fn search_identifier<'a>(ctx: &'a mut Context, name: &str) -> Option<(usize, &'a Factor)> {
-    let mut scope = ctx.scope;
+    if ctx.scope.is_empty() {
+        return None
+    }
+    let mut n = ctx.scope.len() - 1;
     loop {
+        let scope = ctx.scope[n];
         if ctx.identifier_storage[scope].contains_key(name) {
             return Some((scope, &ctx.identifier_storage[scope][name]))
         }
-        if scope == 0 {
+        if n == 0 {
             return None
         }
-        scope -= 1;
+        n -= 1;
     }
 }
 
@@ -79,6 +83,13 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
         return Ok(factors)
     }
 
+    let mut user_defined_function = UserDefinedFunction {
+        scope: Vec::new(),
+        statement: Statement {
+            expression: Expression { factors: Vec::new() },
+            statements: Vec::new(),
+        }
+    };
     match search_identifier(ctx, func.name.as_ref().unwrap()) {
         Some(iv) => {
             if iv.1.kind != FactorKind::Function {
@@ -90,16 +101,7 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
                 },
                 None => match &iv.1.user_defined_function {
                     Some(udf) => {
-                        let udf_scope = udf.scope;
-                        let udf_statement = udf.statement.clone();
-                        match exec(ctx, &udf_statement) {
-                            Ok(er) => {
-                                return Ok(er);
-                            },
-                            Err(e) => {
-                                return Err(e)
-                            },
-                        }
+                        user_defined_function = udf.clone();
                     },
                     None => {
                         return Err("Identifier is not function".to_owned())
@@ -111,9 +113,11 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
             return Ok(factors.clone())
         },
     };
-    //let ctx_scope = ctx.scope;
-    //ctx.scope = udf_scope;
-    //ctx.scope = ctx_scope;
+    let backup_scope = ctx.scope.clone();
+    ctx.scope = user_defined_function.scope;
+    let res = exec(ctx, &user_defined_function.statement);
+    ctx.scope = backup_scope;
+    res
 }
 
 pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, String> {
@@ -150,21 +154,22 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                 return Err("lval must be identifier".to_owned())
             }
             let second_factor_name = second_factor.name.as_ref().unwrap();
-            if ctx.identifier_storage[ctx.scope].contains_key(second_factor_name) {
+            let current_scope = ctx.current_scope();
+            if ctx.identifier_storage[current_scope].contains_key(second_factor_name) {
                 return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
             }
             let mut iv = Factor::new();
             iv.kind = FactorKind::Function;
             iv.user_defined_function = Some(
                 UserDefinedFunction {
-                    scope: ctx.scope + 1,
+                    scope: ctx.scope.clone(),
                     statement: Statement {
                         expression: Expression { factors: Vec::new() },
                         statements: statement.statements.clone(),
                     }
                 }
             );
-            ctx.identifier_storage[ctx.scope].insert(
+            ctx.identifier_storage[current_scope].insert(
                 second_factor_name.clone(),
                 iv
             );
@@ -415,10 +420,11 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     is
 }
 pub fn init_context() -> Context {
-    let mut is = init_identifier_storage();
-    is.push(HashMap::new());
-    Context {
-        scope: 1,
+    let is = init_identifier_storage();
+    let mut ctx = Context {
+        scope: vec![0],
         identifier_storage: is,
-    }
+    };
+    ctx.push_new();
+    ctx
 }

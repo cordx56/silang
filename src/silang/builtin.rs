@@ -66,6 +66,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
         }
     }
 
+    let current_scope = ctx.current_scope();
     let mut return_vec = Vec::new();
     if lval.kind == FactorKind::Expression {
         match eval(ctx, lval.expression.as_ref().unwrap()) {
@@ -74,7 +75,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
                     if f.kind != FactorKind::Identifier {
                         return Err(define::LVAL_MUST_BE_IDENTIFIER.to_owned())
                     }
-                    if ctx.identifier_storage[ctx.scope].contains_key(f.name.as_ref().unwrap()) {
+                    if ctx.identifier_storage[current_scope].contains_key(f.name.as_ref().unwrap()) {
                         return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
                     }
                     return_vec.push(f);
@@ -88,7 +89,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
         if lval.kind != FactorKind::Identifier {
             return Err(define::LVAL_MUST_BE_IDENTIFIER.to_owned())
         }
-        if ctx.identifier_storage[ctx.scope].contains_key(lval.name.as_ref().unwrap()) {
+        if ctx.identifier_storage[current_scope].contains_key(lval.name.as_ref().unwrap()) {
             return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
         }
         return_vec.push(lval.clone());
@@ -102,7 +103,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             let mut iv = Factor::new();
             iv.kind = FactorKind::String;
             iv.string = Some("".to_owned());
-            ctx.identifier_storage[ctx.scope].insert(
+            ctx.identifier_storage[current_scope].insert(
                 return_vec[n].name.as_ref().unwrap().to_owned(),
                 iv,
             );
@@ -110,7 +111,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             let mut iv = Factor::new();
             iv.kind = FactorKind::Int;
             iv.int = Some(0);
-            ctx.identifier_storage[ctx.scope].insert(
+            ctx.identifier_storage[current_scope].insert(
                 return_vec[n].name.as_ref().unwrap().to_owned(),
                 iv,
             );
@@ -118,7 +119,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             let mut iv = Factor::new();
             iv.kind = FactorKind::Float;
             iv.float = Some(0.0);
-            ctx.identifier_storage[ctx.scope].insert(
+            ctx.identifier_storage[current_scope].insert(
                 return_vec[n].name.as_ref().unwrap().to_owned(),
                 iv,
             );
@@ -126,7 +127,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             let mut iv = Factor::new();
             iv.kind = FactorKind::Bool;
             iv.bool = Some(false);
-            ctx.identifier_storage[ctx.scope].insert(
+            ctx.identifier_storage[current_scope].insert(
                 return_vec[n].name.as_ref().unwrap().to_owned(),
                 iv,
             );
@@ -134,7 +135,7 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             let mut iv = Factor::new();
             iv.kind = FactorKind::Vector;
             iv.vector = Some(Vec::new());
-            ctx.identifier_storage[ctx.scope].insert(
+            ctx.identifier_storage[current_scope].insert(
                 return_vec[n].name.as_ref().unwrap().to_owned(),
                 iv,
             );
@@ -142,14 +143,14 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
             let mut iv = Factor::new();
             iv.kind = FactorKind::Map;
             iv.map = Some(HashMap::new());
-            ctx.identifier_storage[ctx.scope].insert(
+            ctx.identifier_storage[current_scope].insert(
                 return_vec[n].name.as_ref().unwrap().to_owned(),
                 iv,
             );
         } else if type_name_vec[n] == define::FUNCTION {
             let mut iv = Factor::new();
             iv.kind = FactorKind::Function;
-            ctx.identifier_storage[ctx.scope].insert(
+            ctx.identifier_storage[current_scope].insert(
                 return_vec[n].name.as_ref().unwrap().to_owned(),
                 iv,
             );

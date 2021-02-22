@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct UserDefinedFunction {
-    scope: usize,
+    scope: Vec<usize>,
     statement: Statement,
 }
 
@@ -73,17 +73,20 @@ pub struct Statement {
 
 pub type IdentifierStorage = Vec<HashMap<String, Factor>>;
 pub struct Context {
-    pub scope: usize,
+    pub scope: Vec::<usize>,
     pub identifier_storage: IdentifierStorage,
 }
 
 impl Context {
     pub fn push_new(&mut self) {
-        self.scope += 1;
+        self.scope.push(self.identifier_storage.len());
         self.identifier_storage.push(HashMap::new());
     }
     pub fn pop(&mut self) {
-        self.scope -= 1;
+        self.scope.pop();
         self.identifier_storage.pop();
+    }
+    pub fn current_scope(&mut self) -> usize {
+        self.scope[self.scope.len() - 1]
     }
 }
