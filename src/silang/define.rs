@@ -58,5 +58,7 @@ pub static LOOP: &str = "loop";
 pub static IDENTIFIER_NOT_DEFINED: &str = "Identifier not defined";
 pub static REDEFINITION_NOT_SUPPORTED: &str = "Redefinition not supported";
 pub static LVAL_MUST_BE_IDENTIFIER: &str = "lval must be identifier";
+pub static TYPE_NOT_MATCHED: &str = "Type not matched";
+pub static ARGUMENT_LENGTH_MISMATCH: &str = "Argument length mismatch";
 pub static UNABLE_TO_CAST: &str = "Unable to cast";
 pub static UNSUPPORTED_OPERATION: &str = "Unsupported operation";

@@ -88,7 +88,7 @@ fn main() {
                         if matches.is_present("parseTree") {
                             println!("{}", silang::parser::parse_tree_statement(s.1, 0));
                         } else {
-                            match silang::run::exec(&mut ctx, &s.1) {
+                            match silang::run::exec(&mut ctx, &s.1, &Vec::new()) {
                                 Ok(fs) => {
                                     for f in fs {
                                         silang::builtin::print_factor(&mut ctx, f).ok();

@@ -44,6 +44,23 @@ pub fn assign_identifier(ctx: &mut Context, scope: usize, name: &str, iv: Factor
     ctx.identifier_storage[scope].get_mut(name).unwrap().function = iv.function;
 }
 
+pub fn eval_factor(ctx: &mut Context, factor: &Factor) -> Result<Vec<Factor>, String> {
+    let mut factors = Vec::new();
+    if factor.kind == FactorKind::Expression {
+        match eval(ctx, factor.expression.as_ref().unwrap()) {
+            Ok(er) => {
+                factors = er;
+            },
+            Err(e) => {
+                return Err(e)
+            },
+        }
+    } else {
+        factors.push(factor.clone());
+    }
+    Ok(factors)
+}
+
 pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String> {
     if expr.factors.len() == 0 {
         return Ok(Vec::new())
@@ -97,7 +114,14 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
                         let user_defined_function = udf.clone();
                         let backup_scope = ctx.scope.clone();
                         ctx.scope = user_defined_function.scope;
-                        let res = exec(ctx, &user_defined_function.statement);
+                        let mut args = Vec::new();
+                        for n in 1..factors.len() {
+                            match eval_factor(ctx, &factors[n]) {
+                                Ok(fs) => args.extend_from_slice(&fs),
+                                Err(e) => return Err(e),
+                            }
+                        }
+                        let res = exec(ctx, &user_defined_function.statement, &args);
                         ctx.scope = backup_scope;
                         return res
                     },
@@ -113,7 +137,7 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
     };
 }
 
-pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, String> {
+pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor]) -> Result<Vec<Factor>, String> {
     let mut is_loop = false;
     'root: loop {
         let mut res = Vec::new();
@@ -126,7 +150,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
             },
         }
         // User Defined Function Definition
-        if res.len() == 2 &&
+        if 2 <= res.len() &&
             res[0].kind == FactorKind::Identifier &&
                 res[0].name.as_ref().unwrap() == define::FUNCTION_DEFINITION {
             let mut second_factor = res[1].clone();
@@ -153,12 +177,19 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
             }
             let mut iv = Factor::new();
             iv.kind = FactorKind::Function;
+            let mut params = Vec::new();
+            if 2 < res.len() {
+                if res[2].kind == FactorKind::Expression {
+                    params = res[2].expression.as_ref().unwrap().factors.clone();
+                }
+            }
             iv.user_defined_function = Some(
                 UserDefinedFunction {
                     scope: ctx.scope.clone(),
                     statement: Statement {
                         expression: Expression { factors: Vec::new() },
                         statements: statement.statements.clone(),
+                        params: params,
                     }
                 }
             );
@@ -187,26 +218,33 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
                     },
                 }
             }
-            if second_factor.kind != FactorKind::Identifier {
-                return Err("Target value must be a identifier".to_owned())
-            }
-            let second_factor_name = second_factor.name.as_ref().unwrap();
-            match search_identifier(ctx, second_factor_name) {
-                Some(iv) => {
-                    if iv.1.kind != FactorKind::Bool {
-                        return Err("Target value is not bool".to_owned())
+            if second_factor.kind == FactorKind::Bool {
+                if second_factor.bool.unwrap() {
+                    if if_loop_str == define::LOOP {
+                        is_loop = true;
                     }
-                    if iv.1.bool.unwrap() {
-                        if if_loop_str == define::LOOP {
-                            is_loop = true;
+                } else {
+                    return Ok(Vec::new())
+                }
+            } else if second_factor.kind == FactorKind::Identifier {
+                let second_factor_name = second_factor.name.as_ref().unwrap();
+                match search_identifier(ctx, second_factor_name) {
+                    Some(iv) => {
+                        if iv.1.kind != FactorKind::Bool {
+                            return Err("Target value is not bool".to_owned())
                         }
-                    } else {
-                        return Ok(Vec::new())
-                    }
-                },
-                None => {
-                    return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
-                },
+                        if iv.1.bool.unwrap() {
+                            if if_loop_str == define::LOOP {
+                                is_loop = true;
+                            }
+                        } else {
+                            return Ok(Vec::new())
+                        }
+                    },
+                    None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
+                }
+            } else {
+                return Err("Target value is not bool".to_owned())
             }
         }
 
@@ -214,8 +252,22 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
         // Execute statements
         if 0 < statement.statements.len() {
             ctx.push_new();
+            // Arguments
+            let mut params = Vec::new();
+            for param in &statement.params {
+                match eval_factor(ctx, &param) {
+                    Ok(p) => params.extend_from_slice(&p),
+                    Err(e) => return Err(e),
+                }
+            }
+            if arguments.len() != params.len() {
+                return Err(define::ARGUMENT_LENGTH_MISMATCH.to_owned())
+            }
+            for n in 0..arguments.len() {
+                builtin::assign_variable(ctx, &params[n], &arguments[n]);
+            }
             for s in &statement.statements {
-                match exec(ctx, s) {
+                match exec(ctx, s, &Vec::new()) {
                     Ok(er) => {
                         if 0 < er.len() && er[0].kind == FactorKind::Identifier {
                             let first_factor = &er[0];
@@ -266,7 +318,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement) -> Result<Vec<Factor>, Str
 
 pub fn run(ctx: &mut Context, program: Vec<Statement>) -> Result<(), String> {
     for s in program {
-        match exec(ctx, &s) {
+        match exec(ctx, &s, &Vec::new()) {
             Ok(_) => {},
             Err(e) => {
                 return Err(e)
@@ -282,7 +334,7 @@ pub fn init_identifier_storage() -> IdentifierStorage {
 
     let mut iv_decas = Factor::new();
     iv_decas.kind = FactorKind::Function;
-    iv_decas.function = Some(builtin::define_variable);
+    iv_decas.function = Some(builtin::define);
     scope0.insert(
         define::DECAS_ALIAS.to_owned(),
         iv_decas.clone(),
@@ -293,7 +345,7 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     );
     let mut iv_assign = Factor::new();
     iv_assign.kind = FactorKind::Function;
-    iv_assign.function = Some(builtin::assign_variable);
+    iv_assign.function = Some(builtin::assign);
     scope0.insert(
         define::ASSIGN.to_owned(),
         iv_assign,
@@ -356,6 +408,14 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     scope0.insert(
         define::REM.to_owned(),
         iv_arithmetic.clone(),
+    );
+
+    let mut iv_equal = Factor::new();
+    iv_equal.kind = FactorKind::Function;
+    iv_equal.function = Some(builtin::equal);
+    scope0.insert(
+        define::EQUAL.to_owned(),
+        iv_equal,
     );
 
     let mut iv_string = Factor::new();

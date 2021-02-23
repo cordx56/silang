@@ -1,13 +1,13 @@
 use super::{
     FactorKind,
     Factor,
-    Expression,
     Context,
 };
 
 use super::run::{
     search_identifier,
     assign_identifier,
+    eval_factor,
     eval,
 };
 
@@ -15,7 +15,7 @@ use super::define;
 
 use std::collections::HashMap;
 
-pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+pub fn define(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
     if factors.len() != 3 {
         return Err("Argument length must be 2".to_owned())
     }
@@ -161,7 +161,69 @@ pub fn define_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
     Ok(return_vec)
 }
 
-pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+pub fn assign_variable(ctx: &mut Context, lval: &Factor, rval: &Factor) -> Result<(), String> {
+    if lval.kind != FactorKind::Identifier {
+        return Err(define::LVAL_MUST_BE_IDENTIFIER.to_owned())
+    }
+    let left_factor_name = lval.name.as_ref().unwrap();
+    let mut scope: usize = 0;
+    match search_identifier(ctx, left_factor_name) {
+        Some(iv) => {
+            scope = iv.0;
+        },
+        None => {
+            return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
+        },
+    }
+    if rval.kind == FactorKind::Identifier {
+        let mut right_identifier_value = Factor::new();
+        match search_identifier(ctx, rval.name.as_ref().unwrap()) {
+            Some(iv) => {
+                right_identifier_value = iv.1.clone();
+            },
+            None => {
+                return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
+            },
+        }
+        if ctx.identifier_storage[scope][left_factor_name].kind != right_identifier_value.kind {
+            return Err(define::TYPE_NOT_MATCHED.to_owned())
+        }
+        assign_identifier(ctx, scope, left_factor_name, right_identifier_value);
+        return Ok(());
+    } else {
+        if ctx.identifier_storage[scope][left_factor_name].kind == FactorKind::String {
+            if rval.kind != FactorKind::String {
+                return Err(define::TYPE_NOT_MATCHED.to_owned())
+            }
+            ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().string = Some(rval.string.as_ref().unwrap().to_owned());
+            return Ok(());
+        } else if ctx.identifier_storage[scope][left_factor_name].kind == FactorKind::Int {
+            if rval.kind == FactorKind::Int {
+                ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().int = Some(rval.int.unwrap());
+                return Ok(());
+            } else if rval.kind == FactorKind::Float {
+                ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().int = Some(rval.float.unwrap() as i64);
+                return Ok(());
+            } else {
+                return Err(define::TYPE_NOT_MATCHED.to_owned())
+            }
+        } else if ctx.identifier_storage[scope][left_factor_name].kind == FactorKind::Float {
+            if rval.kind == FactorKind::Int {
+                ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().float = Some(rval.int.unwrap() as f64);
+                return Ok(());
+            } else if rval.kind == FactorKind::Float {
+                ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().float = Some(rval.float.unwrap());
+                return Ok(());
+            } else {
+                return Err(define::TYPE_NOT_MATCHED.to_owned())
+            }
+        } else {
+            return Err(define::TYPE_NOT_MATCHED.to_owned())
+        }
+    }
+}
+
+pub fn assign(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
     if factors.len() != 3 {
         return Err("Argument length must be 2".to_owned())
     }
@@ -169,86 +231,24 @@ pub fn assign_variable(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Fa
     let rval = &factors[2];
 
     let mut right_factors = Vec::new();
-    if rval.kind == FactorKind::Expression {
-        match eval(ctx, rval.expression.as_ref().unwrap()) {
-            Ok(er) => {
-                right_factors = er;
-            },
-            Err(e) => {
-                return Err(e)
-            },
-        }
-    } else {
-        right_factors.push(rval.clone());
+    match eval_factor(ctx, rval) {
+        Ok(factors) => right_factors = factors,
+        Err(e) => return Err(e),
     }
 
     let mut left_factors = Vec::new();
-    if lval.kind == FactorKind::Expression {
-        match eval(ctx, lval.expression.as_ref().unwrap()) {
-            Ok(er) => {
-                left_factors = er;
-            },
-            Err(e) => {
-                return Err(e)
-            },
-        }
-    } else {
-        left_factors.push(lval.clone());
+    match eval_factor(ctx, lval) {
+        Ok(factors) => left_factors = factors,
+        Err(e) => return Err(e),
     }
 
     if left_factors.len() != right_factors.len() {
         return Err("lval and rval length must be equal".to_owned())
     }
     for n in 0..left_factors.len() {
-        let mut right_identifier_value = Factor::new();
-        if right_factors[n].kind == FactorKind::Identifier {
-            match search_identifier(ctx, right_factors[n].name.as_ref().unwrap()) {
-                Some(iv) => {
-                    right_identifier_value = iv.1.clone();
-                },
-                None => {
-                    return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
-                },
-            }
-        }
-        let left_factor_name = left_factors[n].name.as_ref().unwrap();
-        let mut scope: usize = 0;
-        match search_identifier(ctx, left_factor_name) {
-            Some(iv) => {
-                scope = iv.0;
-            },
-            None => {
-                return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
-            },
-        }
-        if right_factors[n].kind == FactorKind::Identifier {
-            if ctx.identifier_storage[scope][left_factor_name].kind != right_identifier_value.kind {
-                return Err("Type not matched".to_owned())
-            }
-            assign_identifier(ctx, scope, left_factor_name, right_identifier_value);
-        } else {
-            if ctx.identifier_storage[scope][left_factor_name].kind == FactorKind::String {
-                if right_factors[n].kind != FactorKind::String {
-                    return Err("Type not matched".to_owned())
-                }
-                ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().string = Some(right_factors[n].string.as_ref().unwrap().to_owned());
-            } else if ctx.identifier_storage[scope][left_factor_name].kind == FactorKind::Int {
-                if right_factors[n].kind == FactorKind::Int {
-                    ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().int = Some(right_factors[n].int.unwrap());
-                } else if right_factors[n].kind == FactorKind::Float {
-                    ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().int = Some(right_factors[n].float.unwrap() as i64);
-                } else {
-                    return Err("Type not matched".to_owned())
-                }
-            } else if ctx.identifier_storage[scope][left_factor_name].kind == FactorKind::Float {
-                if right_factors[n].kind == FactorKind::Int {
-                    ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().float = Some(right_factors[n].int.unwrap() as f64);
-                } else if right_factors[n].kind == FactorKind::Float {
-                    ctx.identifier_storage[scope].get_mut(left_factor_name).unwrap().float = Some(right_factors[n].float.unwrap());
-                } else {
-                    return Err("Type not matched".to_owned())
-                }
-            }
+        match assign_variable(ctx, &left_factors[n], &right_factors[n]) {
+            Ok(_) => {},
+            Err(e) => return Err(e),
         }
     }
     Ok(left_factors)
@@ -267,8 +267,7 @@ pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), String> {
                 } else if iv.1.kind == FactorKind::Bool {
                     print!("{}", iv.1.bool.unwrap());
                 } else {
-                    return Err("Can't print unknown identifier".to_owned())
-                }
+                    return Err("Can't print unknown identifier".to_owned()) }
             },
             None => {
                 return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
@@ -323,61 +322,6 @@ pub fn print(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Str
     }
     Ok(Vec::new())
 }
-
-/*
-pub fn identifier_value_to_factor(iv: &IdentifierValue) -> Result<Factor, String> {
-    if iv.identifier_type == FactorKind::String {
-        Ok(Factor {
-            kind: FactorKind::String,
-            name: None,
-            string: Some(iv.string.as_ref().unwrap().clone()),
-            int: None,
-            float: None,
-            bool: None,
-            vector: None,
-            map: None,
-            expression: None,
-        })
-    } else if iv.identifier_type == FactorKind::Int {
-        Ok(Factor {
-            kind: FactorKind::Int,
-            name: None,
-            string: None,
-            int: Some(iv.int.unwrap()),
-            float: None,
-            bool: None,
-            vector: None,
-            map: None,
-            expression: None,
-        })
-    } else if iv.identifier_type == FactorKind::Float {
-        Ok(Factor {
-            kind: FactorKind::Float,
-            name: None,
-            string: None,
-            int: None,
-            float: Some(iv.float.unwrap()),
-            bool: None,
-            vector: None,
-            map: None,
-            expression: None,
-        })
-    } else if iv.identifier_type == FactorKind::Bool {
-        Ok(Factor {
-            kind: FactorKind::Bool,
-            name: None,
-            string: None,
-            int: None,
-            float: None,
-            bool: Some(iv.bool.unwrap()),
-            vector: None,
-            map: None,
-            expression: None,
-        })
-    } else {
-        Err("Unable to cast from Identifier to Factor".to_owned())
-    }
-}*/
 
 pub fn value(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
     let mut factors_to_value = Vec::new();
@@ -834,4 +778,84 @@ pub fn arithmetic(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>
         }
     }
     Ok(vec![res])
+}
+
+pub fn equal_factor(lval: &Factor, rval: &Factor) -> Result<Factor, String> {
+    let mut ret = Factor::new();
+    ret.kind = FactorKind::Bool;
+    if lval.kind == FactorKind::String && rval.kind == FactorKind::String {
+        ret.bool = Some(lval.string.as_ref().unwrap() == rval.string.as_ref().unwrap());
+        return Ok(ret)
+    } else if lval.kind == FactorKind::Int {
+        if rval.kind == FactorKind::Int {
+            ret.bool = Some(lval.int.unwrap() == rval.int.unwrap());
+            return Ok(ret)
+        } else if rval.kind == FactorKind::Float {
+            ret.bool = Some((lval.int.unwrap() as f64) == rval.float.unwrap());
+            return Ok(ret)
+        }
+    } else if lval.kind == FactorKind::Float {
+        if rval.kind == FactorKind::Int {
+            ret.bool = Some(lval.float.unwrap() == (rval.int.unwrap() as f64));
+            return Ok(ret)
+        } else if rval.kind == FactorKind::Float {
+            ret.bool = Some(lval.float.unwrap() == rval.float.unwrap());
+            return Ok(ret)
+        }
+    }
+    return Err(define::UNSUPPORTED_OPERATION.to_owned())
+}
+
+pub fn equal(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+    let mut factors_to_equal = Vec::new();
+    for n in 1..factors.len() {
+        match eval_factor(ctx, &factors[n]) {
+            Ok(fs) => factors_to_equal.extend_from_slice(&fs),
+            Err(e) => return Err(e),
+        }
+    }
+    if factors_to_equal.len() < 2 {
+        return Err(define::ARGUMENT_LENGTH_MISMATCH.to_owned())
+    }
+    let mut res = Factor::new();
+    res.kind = FactorKind::Bool;
+    res.bool = Some(false);
+
+    let mut cmp = factors_to_equal[0].clone();
+    if cmp.kind == FactorKind::Identifier {
+        match search_identifier(ctx, factors_to_equal[0].name.as_ref().unwrap()) {
+            Some(iv) => cmp = iv.1.clone(),
+            None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
+        }
+    }
+    for n in 1..factors_to_equal.len() {
+        if factors_to_equal[n].kind == FactorKind::Identifier {
+            match search_identifier(ctx, factors_to_equal[n].name.as_ref().unwrap()) {
+                Some(iv) => {
+                    match equal_factor(&cmp, &iv.1) {
+                        Ok(ef) => {
+                            if ef.kind == FactorKind::Bool && ef.bool.unwrap() == false {
+                                return Ok(vec![ef])
+                            }
+                        },
+                        Err(e) => return Err(e),
+                    }
+                },
+                None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
+            }
+        } else {
+            match equal_factor(&cmp, &factors_to_equal[n]) {
+                Ok(ef) => {
+                    if ef.kind == FactorKind::Bool && ef.bool.unwrap() == false {
+                        return Ok(vec![ef])
+                    }
+                },
+                Err(e) => return Err(e),
+            }
+        }
+    }
+    let mut factor_true = Factor::new();
+    factor_true.kind = FactorKind::Bool;
+    factor_true.bool = Some(true);
+    Ok(vec![factor_true])
 }

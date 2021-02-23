@@ -75,7 +75,7 @@ pub fn statement(s: &str) -> IResult<&str, Statement> {
                 line_ending,
             )),
             |expr: (&str, Expression, &str, &str)| -> Statement {
-                Statement { expression: expr.1, statements: Vec::new() }
+                Statement { expression: expr.1, statements: Vec::new(), params: Vec::new() }
             }
         ),
         map(
@@ -102,8 +102,8 @@ pub fn statement(s: &str) -> IResult<&str, Statement> {
             )),
             |(expr, _, (_, stmts, _), _)| -> Statement {
                 match expr {
-                    Some(e) => Statement { expression: e.1, statements: stmts },
-                    None => Statement { expression: Expression { factors: Vec::new() }, statements: stmts },
+                    Some(e) => Statement { expression: e.1, statements: stmts, params: Vec::new() },
+                    None => Statement { expression: Expression { factors: Vec::new() }, statements: stmts, params: Vec::new() },
                 }
             }
         )
