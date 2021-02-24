@@ -4,8 +4,11 @@ use super::{
     Factor,
     Expression,
     Statement,
+    ScopeType,
     IdentifierStorage,
     Context,
+    ExecResult,
+    ExecReturn,
 };
 
 use super::builtin;
@@ -16,8 +19,7 @@ use std::collections::HashMap;
 pub fn search_identifier<'a>(ctx: &'a mut Context, name: &str) -> Option<(usize, &'a Factor)> {
     if ctx.scope.is_empty() {
         return None
-    }
-    let mut n = ctx.scope.len() - 1;
+    } let mut n = ctx.scope.len() - 1;
     loop {
         let scope = ctx.scope[n];
         if ctx.identifier_storage[scope].contains_key(name) {
@@ -113,7 +115,6 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
                     Some(udf) => {
                         let user_defined_function = udf.clone();
                         let backup_scope = ctx.scope.clone();
-                        ctx.scope = user_defined_function.scope;
                         let mut args = Vec::new();
                         for n in 1..factors.len() {
                             match eval_factor(ctx, &factors[n]) {
@@ -121,9 +122,13 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
                                 Err(e) => return Err(e),
                             }
                         }
-                        let res = exec(ctx, &user_defined_function.statement, &args);
+                        ctx.scope = user_defined_function.scope;
+                        let res = exec(ctx, &user_defined_function.statement, &args, Some(ScopeType::UserDefinedFunction));
                         ctx.scope = backup_scope;
-                        return res
+                        match res {
+                            Ok(execreturn) => return Ok(execreturn.factors),
+                            Err(e) => return Err(e),
+                        }
                     },
                     None => {
                         return Err("Identifier is not function".to_owned())
@@ -137,8 +142,12 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
     };
 }
 
-pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor]) -> Result<Vec<Factor>, String> {
+pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor], scope_type: Option<ScopeType>) -> Result<ExecReturn, String> {
     let mut is_loop = false;
+    let mut scope_type_set = ScopeType::Block;
+    if scope_type.is_some() {
+        scope_type_set = scope_type.unwrap();
+    }
     'root: loop {
         let mut res = Vec::new();
         match eval(ctx, &statement.expression) {
@@ -197,7 +206,10 @@ pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor]) -> R
                 second_factor_name.clone(),
                 iv
             );
-            return Ok(vec![second_factor])
+            return Ok(ExecReturn{
+                result: ExecResult::UserDefinedFunctionDefinition,
+                factors: vec![second_factor]
+            })
         // if / loop statement
         } else if res.len() == 2 &&
             res[0].kind == FactorKind::Identifier &&
@@ -218,13 +230,33 @@ pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor]) -> R
                     },
                 }
             }
+            if second_factor.kind == FactorKind::Identifier {
+                match search_identifier(ctx, second_factor.name.as_ref().unwrap()) {
+                    Some(iv) => {
+                        second_factor = iv.1.clone();
+                    },
+                    None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
+                }
+            }
             if second_factor.kind == FactorKind::Bool {
                 if second_factor.bool.unwrap() {
+                    scope_type_set = ScopeType::If;
                     if if_loop_str == define::LOOP {
                         is_loop = true;
+                        scope_type_set = ScopeType::Loop;
                     }
                 } else {
-                    return Ok(Vec::new())
+                    if if_loop_str == define::LOOP {
+                        return Ok(ExecReturn {
+                            result: ExecResult::LoopFalse,
+                            factors: Vec::new(),
+                        })
+                    } else {
+                        return Ok(ExecReturn {
+                            result: ExecResult::IfFalse,
+                            factors: Vec::new(),
+                        })
+                    }
                 }
             } else if second_factor.kind == FactorKind::Identifier {
                 let second_factor_name = second_factor.name.as_ref().unwrap();
@@ -238,7 +270,17 @@ pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor]) -> R
                                 is_loop = true;
                             }
                         } else {
-                            return Ok(Vec::new())
+                            if if_loop_str == define::LOOP {
+                                return Ok(ExecReturn {
+                                    result: ExecResult::LoopFalse,
+                                    factors: Vec::new(),
+                                })
+                            } else {
+                                return Ok(ExecReturn {
+                                    result: ExecResult::IfFalse,
+                                    factors: Vec::new(),
+                                })
+                            }
                         }
                     },
                     None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
@@ -251,31 +293,85 @@ pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor]) -> R
         // Normal Statement
         // Execute statements
         if 0 < statement.statements.len() {
-            ctx.push_new();
+            ctx.push_new(scope_type_set.clone());
             // Arguments
             let mut params = Vec::new();
             for param in &statement.params {
                 match eval_factor(ctx, &param) {
                     Ok(p) => params.extend_from_slice(&p),
-                    Err(e) => return Err(e),
+                    Err(e) => {
+                        ctx.pop();
+                        return Err(e)
+                    },
                 }
             }
             if arguments.len() != params.len() {
+                ctx.pop();
                 return Err(define::ARGUMENT_LENGTH_MISMATCH.to_owned())
             }
             for n in 0..arguments.len() {
-                builtin::assign_variable(ctx, &params[n], &arguments[n]);
+                match builtin::assign_variable(ctx, &params[n], &arguments[n]) {
+                    Ok(_) => {},
+                    Err(e) => {
+                        ctx.pop();
+                        return Err(e)
+                    }
+                }
             }
             for s in &statement.statements {
-                match exec(ctx, s, &Vec::new()) {
+                match exec(ctx, s, &Vec::new(), None) {
                     Ok(er) => {
-                        if 0 < er.len() && er[0].kind == FactorKind::Identifier {
-                            let first_factor = &er[0];
+                        if er.result == ExecResult::Return {
+                            if ctx.scope_type[ctx.scope_type.len() - 1] == ScopeType::UserDefinedFunction {
+                                ctx.pop();
+                                return Ok(ExecReturn {
+                                    result: ExecResult::Normal,
+                                    factors: er.factors,
+                                })
+                            } else {
+                                ctx.pop();
+                                return Ok(ExecReturn {
+                                    result: ExecResult::Return,
+                                    factors: er.factors,
+                                })
+                            }
+                        } else if er.result == ExecResult::LoopBreak {
+                             if ctx.scope_type[ctx.scope_type.len() - 1] == ScopeType::Loop {
+                                ctx.pop();
+                                return Ok(ExecReturn {
+                                    result: ExecResult::Normal,
+                                    factors: er.factors,
+                                })
+                            } else {
+                                ctx.pop();
+                                return Ok(ExecReturn {
+                                    result: ExecResult::LoopBreak,
+                                    factors: er.factors,
+                                })
+                            }
+                        } else if er.result == ExecResult::LoopContinue {
+                             if ctx.scope_type[ctx.scope_type.len() - 1] == ScopeType::Loop {
+                                ctx.pop();
+                                continue 'root;
+                            } else {
+                                ctx.pop();
+                                return Ok(ExecReturn {
+                                    result: ExecResult::LoopContinue,
+                                    factors: er.factors,
+                                })
+                            }
+                        }
+                        if 0 < er.factors.len() && er.factors[0].kind == FactorKind::Identifier {
+                            let first_factor = &er.factors[0];
                             if first_factor.name.as_ref().unwrap() == define::RETURN {
+                                if !ctx.scope_type.contains(&ScopeType::UserDefinedFunction) {
+                                    ctx.pop();
+                                    return Err("return outside function".to_owned())
+                                }
                                 let mut ret = Vec::new();
-                                for n in 1..er.len() {
-                                    if er[n].kind == FactorKind::Expression {
-                                        match eval(ctx, er[n].expression.as_ref().unwrap()) {
+                                for n in 1..er.factors.len() {
+                                    if er.factors[n].kind == FactorKind::Expression {
+                                        match eval(ctx, er.factors[n].expression.as_ref().unwrap()) {
                                             Ok(er2) => {
                                                 for f in er2 {
                                                     ret.push(f);
@@ -287,20 +383,34 @@ pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor]) -> R
                                             }
                                         }
                                     } else {
-                                        ret.push(er[n].clone());
+                                        ret.push(er.factors[n].clone());
                                     }
                                 }
                                 ctx.pop();
-                                return Ok(ret)
+                                return Ok(ExecReturn {
+                                    result: ExecResult::Return,
+                                    factors: ret,
+                                })
                             } else if first_factor.name.as_ref().unwrap() == define::BREAK {
                                 ctx.pop();
-                                return Ok(Vec::new());
+                                return Ok(ExecReturn {
+                                    result: ExecResult::LoopBreak,
+                                    factors: Vec::new(),
+                                });
                             } else if first_factor.name.as_ref().unwrap() == define::CONTINUE {
-                                ctx.pop();
-                                continue 'root;
+                                if ctx.scope_type[ctx.scope_type.len() - 1] == ScopeType::Loop {
+                                    ctx.pop();
+                                    continue 'root;
+                                } else {
+                                    ctx.pop();
+                                    return Ok(ExecReturn {
+                                        result: ExecResult::LoopContinue,
+                                        factors: Vec::new(),
+                                    })
+                                }
                             }
                         }
-                        res = er;
+                        res = er.factors;
                     },
                     Err(e) => {
                         ctx.pop();
@@ -311,14 +421,17 @@ pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor]) -> R
             ctx.pop();
         }
         if !is_loop {
-            return Ok(res);
+            return Ok(ExecReturn {
+                result: ExecResult::Normal,
+                factors: res,
+            });
         }
     }
 }
 
 pub fn run(ctx: &mut Context, program: Vec<Statement>) -> Result<(), String> {
     for s in program {
-        match exec(ctx, &s, &Vec::new()) {
+        match exec(ctx, &s, &Vec::new(), None) {
             Ok(_) => {},
             Err(e) => {
                 return Err(e)
@@ -475,9 +588,10 @@ pub fn init_identifier_storage() -> IdentifierStorage {
 pub fn init_context() -> Context {
     let is = init_identifier_storage();
     let mut ctx = Context {
+        scope_type: vec![ScopeType::Root],
         scope: vec![0],
         identifier_storage: is,
     };
-    ctx.push_new();
+    ctx.push_new(ScopeType::Program);
     ctx
 }

@@ -350,7 +350,9 @@ pub fn value(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Str
             Some(iv) => {
                 res.push(iv.1.clone());
             },
-            None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
+            None => {
+                return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
+            }
         }
     }
     Ok(res)
