@@ -117,6 +117,35 @@ impl Context {
     pub fn current_scope(&mut self) -> usize {
         self.scope[self.scope.len() - 1]
     }
+    pub fn search_identifier(&self, name: &str) -> Option<(usize, &Factor)> {
+        if self.scope.is_empty() {
+            return None
+        }
+        let mut n = self.scope.len() -1;
+        loop {
+            let scope = self.scope[n];
+            if self.identifier_storage[scope].contains_key(name) {
+                return Some((scope, &self.identifier_storage[scope][name]))
+            }
+            if n == 0 {
+                return None
+            }
+            n -= 1;
+        }
+    }
+    pub fn assign_identifier(&mut self, scope: usize, name: &str, iv: Factor) {
+        self.identifier_storage[scope].get_mut(name).unwrap().kind = iv.kind;
+        self.identifier_storage[scope].get_mut(name).unwrap().name = iv.name;
+        self.identifier_storage[scope].get_mut(name).unwrap().string = iv.string;
+        self.identifier_storage[scope].get_mut(name).unwrap().int = iv.int;
+        self.identifier_storage[scope].get_mut(name).unwrap().float = iv.float;
+        self.identifier_storage[scope].get_mut(name).unwrap().bool = iv.bool;
+        self.identifier_storage[scope].get_mut(name).unwrap().vector = iv.vector;
+        self.identifier_storage[scope].get_mut(name).unwrap().map = iv.map;
+        self.identifier_storage[scope].get_mut(name).unwrap().expression = iv.expression;
+        self.identifier_storage[scope].get_mut(name).unwrap().user_defined_function = iv.user_defined_function;
+        self.identifier_storage[scope].get_mut(name).unwrap().function = iv.function;
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

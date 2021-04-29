@@ -5,8 +5,6 @@ use super::{
 };
 
 use super::run::{
-    search_identifier,
-    assign_identifier,
     eval_factor,
     eval,
 };
@@ -30,7 +28,7 @@ pub fn define(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, St
                     if f.kind != FactorKind::Identifier {
                         return Err("rval must be identifier".to_owned())
                     }
-                    match search_identifier(ctx, f.name.as_ref().unwrap()) {
+                    match ctx.search_identifier(f.name.as_ref().unwrap()) {
                         Some(iv) => {
                             if iv.1.kind != FactorKind::TypeName {
                                 return Err("rval must be type name".to_owned())
@@ -52,7 +50,7 @@ pub fn define(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, St
         if rval.kind != FactorKind::Identifier {
             return Err("rval must be identifier".to_owned())
         }
-        match search_identifier(ctx, rval.name.as_ref().unwrap()) {
+        match ctx.search_identifier(rval.name.as_ref().unwrap()) {
             Some(iv) => {
                 if iv.1.kind != FactorKind::TypeName {
                     return Err("rval must be type name".to_owned())
@@ -166,8 +164,8 @@ pub fn assign_variable(ctx: &mut Context, lval: &Factor, rval: &Factor) -> Resul
         return Err(define::LVAL_MUST_BE_IDENTIFIER.to_owned())
     }
     let left_factor_name = lval.name.as_ref().unwrap();
-    let mut scope: usize = 0;
-    match search_identifier(ctx, left_factor_name) {
+    let scope;
+    match ctx.search_identifier(left_factor_name) {
         Some(iv) => {
             scope = iv.0;
         },
@@ -176,8 +174,8 @@ pub fn assign_variable(ctx: &mut Context, lval: &Factor, rval: &Factor) -> Resul
         },
     }
     if rval.kind == FactorKind::Identifier {
-        let mut right_identifier_value = Factor::new();
-        match search_identifier(ctx, rval.name.as_ref().unwrap()) {
+        let right_identifier_value;
+        match ctx.search_identifier(rval.name.as_ref().unwrap()) {
             Some(iv) => {
                 right_identifier_value = iv.1.clone();
             },
@@ -188,7 +186,7 @@ pub fn assign_variable(ctx: &mut Context, lval: &Factor, rval: &Factor) -> Resul
         if ctx.identifier_storage[scope][left_factor_name].kind != right_identifier_value.kind {
             return Err(define::TYPE_NOT_MATCHED.to_owned())
         }
-        assign_identifier(ctx, scope, left_factor_name, right_identifier_value);
+        ctx.assign_identifier(scope, left_factor_name, right_identifier_value);
         return Ok(());
     } else {
         if ctx.identifier_storage[scope][left_factor_name].kind == FactorKind::String {
@@ -230,13 +228,13 @@ pub fn assign(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, St
     let lval = &factors[1];
     let rval = &factors[2];
 
-    let mut right_factors = Vec::new();
+    let right_factors;
     match eval_factor(ctx, rval) {
         Ok(factors) => right_factors = factors,
         Err(e) => return Err(e),
     }
 
-    let mut left_factors = Vec::new();
+    let left_factors;
     match eval_factor(ctx, lval) {
         Ok(factors) => left_factors = factors,
         Err(e) => return Err(e),
@@ -256,7 +254,7 @@ pub fn assign(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, St
 
 pub fn print_factor(ctx: &mut Context, f: Factor) -> Result<(), String> {
     if f.kind == FactorKind::Identifier {
-        match search_identifier(ctx, f.name.as_ref().unwrap()) {
+        match ctx.search_identifier(f.name.as_ref().unwrap()) {
             Some(iv) => {
                 if iv.1.kind == FactorKind::String {
                     print!("{}", iv.1.string.as_ref().unwrap());
@@ -346,7 +344,7 @@ pub fn value(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Str
         if f.kind != FactorKind::Identifier {
             return Err(define::LVAL_MUST_BE_IDENTIFIER.to_owned());
         }
-        match search_identifier(ctx, f.name.as_ref().unwrap()) {
+        match ctx.search_identifier(f.name.as_ref().unwrap()) {
             Some(iv) => {
                 res.push(iv.1.clone());
             },
@@ -525,8 +523,8 @@ pub fn as_cast(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, S
             },
         }
     }
-    let mut to_type = FactorKind::String;
-    match search_identifier(ctx, rval.name.as_ref().unwrap()) {
+    let to_type;
+    match ctx.search_identifier(rval.name.as_ref().unwrap()) {
         Some(iv) => {
             if iv.1.kind != FactorKind::TypeName {
                 return Err("Identifier is not type".to_owned())
@@ -546,7 +544,7 @@ pub fn as_cast(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, S
         },
     }
     if lval.kind == FactorKind::Identifier {
-        match search_identifier(ctx, lval.name.as_ref().unwrap()) {
+        match ctx.search_identifier(lval.name.as_ref().unwrap()) {
             Some(iv) => {
                 match cast_factor(&iv.1, to_type) {
                     Ok(f) => {
@@ -742,7 +740,7 @@ pub fn arithmetic(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>
     }
     let mut res = factors_to_add[0].clone();
     if res.kind == FactorKind::Identifier {
-        match search_identifier(ctx, res.name.as_ref().unwrap()) {
+        match ctx.search_identifier(res.name.as_ref().unwrap()) {
             Some(iv) => {
                 res = iv.1.clone();
             },
@@ -753,7 +751,7 @@ pub fn arithmetic(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>
     }
     for n in 1..factors_to_add.len() {
         if factors_to_add[n].kind == FactorKind::Identifier {
-            match search_identifier(ctx, factors_to_add[n].name.as_ref().unwrap()) {
+            match ctx.search_identifier(factors_to_add[n].name.as_ref().unwrap()) {
                 Some(iv) => {
                     match factor_arithmetic(opr, &res, iv.1) {
                         Ok(f) => {
@@ -825,14 +823,14 @@ pub fn equal(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Str
 
     let mut cmp = factors_to_equal[0].clone();
     if cmp.kind == FactorKind::Identifier {
-        match search_identifier(ctx, factors_to_equal[0].name.as_ref().unwrap()) {
+        match ctx.search_identifier(factors_to_equal[0].name.as_ref().unwrap()) {
             Some(iv) => cmp = iv.1.clone(),
             None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
         }
     }
     for n in 1..factors_to_equal.len() {
         if factors_to_equal[n].kind == FactorKind::Identifier {
-            match search_identifier(ctx, factors_to_equal[n].name.as_ref().unwrap()) {
+            match ctx.search_identifier(factors_to_equal[n].name.as_ref().unwrap()) {
                 Some(iv) => {
                     match equal_factor(&cmp, &iv.1) {
                         Ok(ef) => {

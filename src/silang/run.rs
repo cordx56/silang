@@ -16,36 +16,6 @@ use super::define;
 
 use std::collections::HashMap;
 
-pub fn search_identifier<'a>(ctx: &'a mut Context, name: &str) -> Option<(usize, &'a Factor)> {
-    if ctx.scope.is_empty() {
-        return None
-    } let mut n = ctx.scope.len() - 1;
-    loop {
-        let scope = ctx.scope[n];
-        if ctx.identifier_storage[scope].contains_key(name) {
-            return Some((scope, &ctx.identifier_storage[scope][name]))
-        }
-        if n == 0 {
-            return None
-        }
-        n -= 1;
-    }
-}
-
-pub fn assign_identifier(ctx: &mut Context, scope: usize, name: &str, iv: Factor) {
-    ctx.identifier_storage[scope].get_mut(name).unwrap().kind = iv.kind;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().name = iv.name;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().string = iv.string;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().int = iv.int;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().float = iv.float;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().bool = iv.bool;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().vector = iv.vector;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().map = iv.map;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().expression = iv.expression;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().user_defined_function = iv.user_defined_function;
-    ctx.identifier_storage[scope].get_mut(name).unwrap().function = iv.function;
-}
-
 pub fn eval_factor(ctx: &mut Context, factor: &Factor) -> Result<Vec<Factor>, String> {
     let mut factors = Vec::new();
     if factor.kind == FactorKind::Expression {
@@ -102,7 +72,7 @@ pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String>
         return Ok(factors)
     }
 
-    match search_identifier(ctx, func.name.as_ref().unwrap()) {
+    match ctx.search_identifier(func.name.as_ref().unwrap()) {
         Some(iv) => {
             if iv.1.kind != FactorKind::Function {
                 return Ok(factors.clone())
@@ -149,7 +119,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor], scop
         scope_type_set = scope_type.unwrap();
     }
     'root: loop {
-        let mut res = Vec::new();
+        let mut res;
         match eval(ctx, &statement.expression) {
             Ok(er) => {
                 res = er;
@@ -231,7 +201,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor], scop
                 }
             }
             if second_factor.kind == FactorKind::Identifier {
-                match search_identifier(ctx, second_factor.name.as_ref().unwrap()) {
+                match ctx.search_identifier(second_factor.name.as_ref().unwrap()) {
                     Some(iv) => {
                         second_factor = iv.1.clone();
                     },
@@ -260,7 +230,7 @@ pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor], scop
                 }
             } else if second_factor.kind == FactorKind::Identifier {
                 let second_factor_name = second_factor.name.as_ref().unwrap();
-                match search_identifier(ctx, second_factor_name) {
+                match ctx.search_identifier(second_factor_name) {
                     Some(iv) => {
                         if iv.1.kind != FactorKind::Bool {
                             return Err("Target value is not bool".to_owned())
