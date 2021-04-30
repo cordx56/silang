@@ -4,14 +4,94 @@ use super::{
     Context,
 };
 
+use super::parser;
+
 use super::run::{
     eval_factor,
     eval,
+    run,
 };
 
 use super::define;
 
 use std::collections::HashMap;
+use std::path::Path;
+use std::fs;
+
+pub fn import(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
+    for f in factors[1..].iter() {
+        let module_name;
+        if f.kind == FactorKind::Identifier {
+            match ctx.search_identifier(f.name.as_ref().unwrap()) {
+                Some(iv) => {
+                    if iv.1.kind == FactorKind::String {
+                        module_name = iv.1.string.as_ref().unwrap();
+                    } else {
+                        return Err("Factor must be a string".to_owned())
+                    }
+                },
+                None => {
+                    return Err(define::IDENTIFIER_NOT_DEFINED.to_owned())
+                },
+            }
+        } else if f.kind == FactorKind::String {
+            module_name = f.string.as_ref().unwrap();
+        } else {
+            return Err("Factor must be a string".to_owned());
+        }
+
+        let file_name;
+        if Path::new(&format!("./{}.so", module_name)).exists() {
+            file_name = format!("./{}.so", module_name);
+            unsafe {
+                match libloading::Library::new(file_name) {
+                    Ok(lib) => {
+                        match lib.get::<libloading::Symbol<unsafe extern fn(&mut Context)>>(b"sil_load_lib") {
+                            Ok(func) => {
+                                func(ctx);
+                            },
+                            Err(_) => {
+                                return Err("Import Error: Function get error!".to_owned());
+                            }
+                        }
+                    },
+                    Err(_) => {
+                        return Err("Import Error: Library link error!".to_owned());
+                    }
+                }
+            }
+        } else if Path::new(&format!("./{}.sil", module_name)).exists() {
+            file_name = format!("./{}.sil", module_name);
+            let mut buffer;
+            match fs::read_to_string(file_name) {
+                Ok(s) => {
+                    buffer = s;
+                },
+                Err(_) => {
+                    return Err("Import Error: File read error".to_owned())
+                },
+            }
+            buffer.push_str("\n");
+            let parse_result = parser::program_all_consuming(&buffer);
+            match parse_result {
+                Ok(program) => {
+                    match run(ctx, program.1) {
+                        Ok(_) => {},
+                        Err(e) => {
+                            return Err(e)
+                        }
+                    }
+                },
+                Err(_) => {
+                    return Err("Import Error: Program parse error".to_owned());
+                }
+            }
+        } else {
+            return Err("Import Error: File not found".to_owned())
+        }
+    }
+    return Ok(Vec::new())
+}
 
 pub fn define(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
     if factors.len() != 3 {

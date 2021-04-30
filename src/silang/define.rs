@@ -22,6 +22,7 @@ pub static FALSE: &str = "false";
 
 
 // Functions
+pub static IMPORT: &str = "import";
 pub static DECAS: &str = "decas";
 pub static DECAS_ALIAS: &str = "::";
 pub static FUNCTION_DEFINITION: &str = "f:";

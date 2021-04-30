@@ -415,6 +415,14 @@ pub fn init_identifier_storage() -> IdentifierStorage {
     let mut is = Vec::new();
     let mut scope0 = HashMap::new();
 
+    let mut iv_import = Factor::new();
+    iv_import.kind = FactorKind::Function;
+    iv_import.function = Some(builtin::import);
+    scope0.insert(
+        define::IMPORT.to_owned(),
+        iv_import,
+    );
+
     let mut iv_decas = Factor::new();
     iv_decas.kind = FactorKind::Function;
     iv_decas.function = Some(builtin::define);
