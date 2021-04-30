@@ -4,6 +4,8 @@
 
 元のプログラムはC++で書かれていたが、Rustで書き直した。
 
+言語の試用は[https://silang.cordx.net/](https://silang.cordx.net/)から可能。
+
 ## 実行
 インタプリタの実行
 ```bash
