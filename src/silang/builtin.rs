@@ -15,7 +15,6 @@ use super::run::{
 use super::define;
 
 use std::collections::HashMap;
-use std::path::Path;
 use std::fs;
 
 pub fn import(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, String> {
@@ -40,54 +39,47 @@ pub fn import(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, St
             return Err("Factor must be a string".to_owned());
         }
 
-        let file_name;
-        if Path::new(&format!("./{}.so", module_name)).exists() {
-            file_name = format!("./{}.so", module_name);
-            unsafe {
-                match libloading::Library::new(file_name) {
-                    Ok(lib) => {
-                        match lib.get::<libloading::Symbol<unsafe extern fn(&mut Context)>>(b"sil_load_lib") {
-                            Ok(func) => {
-                                func(ctx);
-                            },
-                            Err(_) => {
-                                return Err("Import Error: Function get error!".to_owned());
-                            }
-                        }
-                    },
-                    Err(_) => {
-                        return Err("Import Error: Library link error!".to_owned());
-                    }
-                }
-            }
-        } else if Path::new(&format!("./{}.sil", module_name)).exists() {
-            file_name = format!("./{}.sil", module_name);
-            let mut buffer;
-            match fs::read_to_string(file_name) {
-                Ok(s) => {
-                    buffer = s;
-                },
-                Err(_) => {
-                    return Err("Import Error: File read error".to_owned())
-                },
-            }
-            buffer.push_str("\n");
-            let parse_result = parser::program_all_consuming(&buffer);
-            match parse_result {
-                Ok(program) => {
-                    match run(ctx, program.1) {
-                        Ok(_) => {},
-                        Err(e) => {
-                            return Err(e)
+        unsafe {
+            match libloading::Library::new(format!("lib{}.so", module_name)) {
+                Ok(lib) => {
+                    match lib.get::<libloading::Symbol<unsafe extern fn(&mut Context)>>(b"sil_load_lib") {
+                        Ok(func) => {
+                            func(ctx);
+                            return Ok(Vec::new());
+                        },
+                        Err(_) => {
+                            return Err("Import Error: Function get error!".to_owned());
                         }
                     }
                 },
                 Err(_) => {
-                    return Err("Import Error: Program parse error".to_owned());
                 }
             }
-        } else {
-            return Err("Import Error: File not found".to_owned())
+        }
+        let file_name = format!("{}.sil", module_name);
+        let mut buffer;
+        match fs::read_to_string(file_name) {
+            Ok(s) => {
+                buffer = s;
+            },
+            Err(_) => {
+                return Err("Import Error: File not found".to_owned())
+            },
+        }
+        buffer.push_str("\n");
+        let parse_result = parser::program_all_consuming(&buffer);
+        match parse_result {
+            Ok(program) => {
+                match run(ctx, program.1) {
+                    Ok(_) => {},
+                    Err(e) => {
+                        return Err(e)
+                    }
+                }
+            },
+            Err(_) => {
+                return Err("Import Error: Program parse error".to_owned());
+            }
         }
     }
     return Ok(Vec::new())
