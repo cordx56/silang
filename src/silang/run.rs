@@ -42,11 +42,20 @@ impl Interpreter {
         expression
     }
 
-    pub fn eval_value(&mut self, value: &Value) -> Result<EvalReturn, String> {
+    pub fn eval_value(&mut self, value: &Value, dereference: bool) -> Result<EvalReturn, String> {
         if let Ok(v) = self.dereference_value(value) {
-            self.eval_value(&v)
+            if dereference {
+                self.eval_value(&v, dereference)
+            } else {
+                Ok(
+                    EvalReturn {
+                        result: EvalResult::Normal,
+                        values: vec![value.clone()]
+                    }
+                )
+            }
         } else if let Some(expr) = &value.expression {
-            self.eval(&expr)
+            self.eval(&expr, dereference)
         } else if let Some(block) = &value.block {
             self.exec_block(&block)
         } else {
@@ -56,7 +65,7 @@ impl Interpreter {
             })
         }
     }
-    pub fn eval(&mut self, expr: &Expression) -> Result<EvalReturn, String> {
+    pub fn eval(&mut self, expr: &Expression, dereference: bool) -> Result<EvalReturn, String> {
         let mut values = Vec::new();
         if expr.values.len() == 0 {
             return Ok(
@@ -67,7 +76,7 @@ impl Interpreter {
             )
         }
         let first_value = &expr.values[0];
-        match self.eval_value(first_value) {
+        match self.eval_value(first_value, true) {
             Ok(res) => values = res.values,
             Err(e) => return Err(e),
         }
@@ -109,7 +118,7 @@ impl Interpreter {
             return res
         } else {
             for v in &expr.values[1..] {
-                match self.eval_value(v) {
+                match self.eval_value(v, dereference) {
                     Ok(r) => {
                         for i in r.values {
                             values.push(i);
@@ -131,7 +140,7 @@ impl Interpreter {
 
     pub fn exec(&mut self, statement: &parser::Statement) -> Result<EvalReturn, String> {
         let expression = self.parser_expr_to_run_expr(&statement.expression);
-        self.eval(&expression)
+        self.eval(&expression, true)
     }
     pub fn exec_block(&mut self, block: &parser::Block) -> Result<EvalReturn, String> {
         self.run(&block.program)

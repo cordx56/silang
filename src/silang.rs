@@ -62,7 +62,7 @@ pub enum EvalResult {
     Break,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct EvalReturn {
     pub result: EvalResult,
     pub values: Vec<Value>,

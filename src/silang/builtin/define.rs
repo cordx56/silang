@@ -16,11 +16,11 @@ impl Interpreter {
         let rhs = &args[2];
         let lhs_evaluated;
         let rhs_evaluated;
-        match self.eval_value(lhs) {
+        match self.eval_value(lhs, true) {
             Ok(result) => lhs_evaluated = result,
             Err(e) => return Err(e),
         }
-        match self.eval_value(rhs) {
+        match self.eval_value(rhs, true) {
             Ok(result) => rhs_evaluated = result,
             Err(e) => return Err(e),
         }
@@ -104,57 +104,45 @@ impl Interpreter {
         }
     }
     pub fn assign_variable(&mut self, lhs: &Value, rhs: &Value, evaluate_rhs: bool) -> Result<Vec<Value>, String> {
-        eprintln!("LHS: {:?}", lhs);
-        if let Some(id) = lhs.identifier_id {
-            if evaluate_rhs {
-                match self.eval_value(rhs) {
-                    Ok(result) => {
-                        let values = result.values;
-                        if values.len() != 1 {
-                            return Err("assign: LHS and RHS length must be equal".to_owned())
-                        }
-                        self.context.set_value_from_identifier_id(id, values[0].clone());
-                    },
-                    Err(e) => return Err(e),
-                }
-            } else {
-                self.context.set_value_from_identifier_id(id, rhs.clone());
-            }
-            let mut value = Value::new();
-            value.identifier_id = Some(id);
-            Ok(vec![value])
-        } else if let Some(lhs_expr) = &lhs.expression {
-            let mut retval = Vec::new();
-            if let Some(rhs_expr) = &rhs.expression {
-                if lhs_expr.values.len() != rhs_expr.values.len() {
-                    return Err("assign: LHS and RHS length must be equal".to_owned())
-                }
-                for i in 0..lhs_expr.values.len() {
-                    //eprintln!("LHS: {:?}", lhs_expr.values[i]);
-                    //eprintln!("RHS: {:?}", rhs_expr.values[i]);
-                    match self.assign_variable(&lhs_expr.values[i], &rhs_expr.values[i], evaluate_rhs) {
-                        Ok(ids) => {
-                            for id in ids {
-                                retval.push(id);
+        let lhs_values;
+        match self.eval_value(lhs, false) {
+            Ok(result) => lhs_values = result.values,
+            Err(e) => return Err(e),
+        }
+        let mut retval = Vec::new();
+        for lhs_v in lhs_values {
+            if let Some(id) = lhs_v.identifier_id {
+                if evaluate_rhs {
+                    match self.eval_value(rhs, true) {
+                        Ok(result) => {
+                            let values = result.values;
+                            if values.len() != 1 {
+                                return Err("assign: LHS and RHS length must be equal".to_owned())
                             }
+                            self.context.set_value_from_identifier_id(id, values[0].clone());
                         },
                         Err(e) => return Err(e),
                     }
+                } else {
+                    self.context.set_value_from_identifier_id(id, rhs.clone());
                 }
+                let mut value = Value::new();
+                value.identifier_id = Some(id);
+                retval.push(value);
+            } else {
+                if !self.context.is_untyped() {
+                    return Err("assign: LHS must be declared identifier".to_owned())
+                }
+                if lhs_v.identifier.is_none() {
+                    return Err("assign: LHS must be identifier".to_owned())
+                }
+                let current_scope = self.context.current_scope();
+                let id = self.context.store_identifier(current_scope, lhs_v.identifier.as_ref().unwrap(), rhs.clone());
+                let mut value = Value::new();
+                value.identifier_id = Some(id);
+                retval.push(value)
             }
-            Ok(retval)
-        } else {
-            if !self.context.is_untyped() {
-                return Err("assign: LHS must be declared identifier".to_owned())
-            }
-            if lhs.identifier.is_none() {
-                return Err("assign: LHS must be identifier".to_owned())
-            }
-            let current_scope = self.context.current_scope();
-            let id = self.context.store_identifier(current_scope, lhs.identifier.as_ref().unwrap(), rhs.clone());
-            let mut value = Value::new();
-            value.identifier_id = Some(id);
-            Ok(vec![value])
         }
+        Ok(retval)
     }
 }

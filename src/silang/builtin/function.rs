@@ -18,7 +18,7 @@ impl Interpreter {
         let return_values = &args[1..];
         let mut evaluated_return_values = Vec::new();
         for r in return_values {
-            match self.eval_value(r) {
+            match self.eval_value(r, true) {
                 Ok(v) => {
                     for i in v.values {
                         evaluated_return_values.push(i);
