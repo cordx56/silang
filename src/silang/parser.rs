@@ -1,9 +1,3 @@
-use super::{
-    FactorKind,
-    Factor,
-    Expression,
-    Statement,
-};
 use super::define;
 
 extern crate nom;
@@ -42,6 +36,7 @@ use nom::{
         many1,
     },
     sequence::delimited,
+    error::VerboseError,
 };
 use std::char::{
     decode_utf16,
@@ -49,71 +44,94 @@ use std::char::{
 };
 use std::u16;
 
-pub fn program_all_consuming(s: &str) -> IResult<&str, Vec<Statement>> {
+#[derive(Debug, PartialEq, Clone)]
+pub struct Factor {
+    pub identifier: Option<String>,
+    pub string: Option<String>,
+    pub int: Option<i64>,
+    pub float: Option<f64>,
+    pub expression: Option<Expression>,
+    pub block: Option<Block>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Expression {
+    pub factors: Vec<Factor>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Statement {
+    pub expression: Expression,
+    //pub params: Vec<Factor>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Program {
+    pub statements: Vec<Statement>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Block {
+    pub program: Program,
+}
+
+
+pub fn program_all_consuming(s: &str) -> IResult<&str, Program, VerboseError<&str>> {
     all_consuming(program)(s)
 }
-pub fn program(s: &str) -> IResult<&str, Vec<Statement>> {
-    many1(
-        delimited(
-            multispace0,
-            statement,
-            multispace0,
-        )
+pub fn program(s: &str) -> IResult<&str, Program, VerboseError<&str>> {
+    map(
+        many1(
+            delimited(
+                multispace0,
+                statement,
+                multispace0,
+            )
+        ),
+        |statements| {
+            Program { statements: statements }
+        }
     )(s)
 }
 
-pub fn statement_all_consuming(s: &str) -> IResult<&str, Statement> {
-    all_consuming(statement)(s)
-}
-pub fn statement(s: &str) -> IResult<&str, Statement> {
-    alt((
-        map(
-            permutation((
+pub fn block(s: &str) -> IResult<&str, Block, VerboseError<&str>> {
+    map(
+        delimited(
+            tag(define::BLOCK_OPEN),
+            delimited(
                 multispace0,
-                expression,
-                space0,
-                line_ending,
-            )),
-            |expr: (&str, Expression, &str, &str)| -> Statement {
-                Statement { expression: expr.1, statements: Vec::new(), params: Vec::new() }
-            }
+                program,
+                multispace0,
+            ),
+            tag(define::BLOCK_CLOSE),
         ),
-        map(
-            permutation((
-                opt(
-                    permutation((
-                        multispace0,
-                        expression,
-                    ))
-                ),
-                space0,
-                delimited(
-                    tag(define::BLOCK_OPEN),
-                    permutation((
-                        multispace0,
-                        many0(
-                            statement,
-                        ),
-                        multispace0,
-                    )),
-                    tag(define::BLOCK_CLOSE),
-                ),
-                multispace0,
-            )),
-            |(expr, _, (_, stmts, _), _)| -> Statement {
-                match expr {
-                    Some(e) => Statement { expression: e.1, statements: stmts, params: Vec::new() },
-                    None => Statement { expression: Expression { factors: Vec::new() }, statements: stmts, params: Vec::new() },
-                }
-            }
-        )
-    ))(s)
+        |program| {
+            Block { program: program }
+        }
+    )(s)
 }
 
-pub fn expression_all_consuming(s: &str) -> IResult<&str, Expression> {
+pub fn statement_all_consuming(s: &str) -> IResult<&str, Statement, VerboseError<&str>> {
+    all_consuming(statement)(s)
+}
+pub fn statement(s: &str) -> IResult<&str, Statement, VerboseError<&str>> {
+    map(
+        permutation((
+            multispace0,
+            expression,
+            space0,
+            line_ending,
+        )),
+        |expr| {
+            Statement{ expression: expr.1 }
+        }
+    )(s)
+}
+
+pub fn expression_all_consuming(s: &str) -> IResult<&str, Expression, VerboseError<&str>> {
     all_consuming(expression)(s)
 }
-pub fn expression(s: &str) -> IResult<&str, Expression> {
+pub fn expression(s: &str) -> IResult<&str, Expression, VerboseError<&str>> {
     map(
         permutation((
             factor,
@@ -135,7 +153,7 @@ pub fn expression(s: &str) -> IResult<&str, Expression> {
     )(s)
 }
 
-pub fn factor(s: &str) -> IResult<&str, Factor> {
+pub fn factor(s: &str) -> IResult<&str, Factor, VerboseError<&str>> {
     alt((
         string,
         number,
@@ -175,31 +193,58 @@ pub fn factor(s: &str) -> IResult<&str, Factor> {
             ),
             |expr: Option<Expression>| -> Factor {
                 match expr {
-                    Some(e) => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, bool: None, vector: None, map: None, expression: Some(e), user_defined_function: None, function: None },
-                    None => Factor { kind: FactorKind::Expression, name: None, string: None, int: None, float: None, bool: None, vector: None, map: None, expression: Some(Expression { factors: Vec::new() }), user_defined_function: None, function: None },
+                    Some(e) => Factor {
+                        identifier: None,
+                        string: None,
+                        int: None,
+                        float: None,
+                        expression: Some(e),
+                        block: None
+                    },
+                    None => Factor {
+                        identifier: None,
+                        string: None,
+                        int: None,
+                        float: None,
+                        expression: Some(Expression { factors: Vec::new() }),
+                        block: None,
+                    },
                 }
             }
-        )
+        ),
+        map(
+            block,
+            |block| {
+                Factor {
+                    identifier: None,
+                    string: None,
+                    int: None,
+                    float: None,
+                    expression: None,
+                    block: Some(block),
+                }
+            }
+        ),
     ))(s)
 }
 
-pub fn identifier(s: &str) -> IResult<&str, Factor> {
+pub fn identifier(s: &str) -> IResult<&str, Factor, VerboseError<&str>> {
     map(
         is_not(define::PARSER_NOT_IDENTIFIER),
         |identifier: &str| -> Factor {
-            Factor { kind: FactorKind::Identifier, name: Some(identifier.to_owned()), string: None, int: None, float: None, bool: None, vector: None, map: None, expression: None, user_defined_function: None, function: None }
+            Factor { identifier: Some(identifier.to_owned()), string: None, int: None, float: None, expression: None, block: None }
         }
     )(s)
 }
-pub fn number(s: &str) -> IResult<&str, Factor> {
+pub fn number(s: &str) -> IResult<&str, Factor, VerboseError<&str>> {
     map(
         double,
         |number: f64| -> Factor {
-            Factor { kind: FactorKind::Float, name: None, string: None, int: None, float: Some(number), bool: None, vector: None, map: None, expression: None, user_defined_function: None, function: None }
+            Factor { identifier: None, string: None, int: None, float: Some(number), expression: None, block: None }
         }
     )(s)
 }
-pub fn string(s: &str) -> IResult<&str, Factor> {
+pub fn string(s: &str) -> IResult<&str, Factor, VerboseError<&str>> {
     map(
         delimited(
             char('"'),
@@ -220,7 +265,7 @@ pub fn string(s: &str) -> IResult<&str, Factor> {
             char('"'),
         ),
         |string: String| -> Factor {
-            Factor { kind: FactorKind::String, name: None, string: Some(string), int: None, float: None, bool: None, vector: None, map: None, expression: None, user_defined_function: None, function: None }
+            Factor { identifier: None, string: Some(string), int: None, float: None, expression: None, block: None }
         }
     )(s)
 }
@@ -244,9 +289,9 @@ pub fn parse_tree_statement(stmt: Statement, depth: usize) -> String {
     push_indent(&mut buffer, depth);
     buffer.push_str("Statement: \n");
     buffer.push_str(&parse_tree_expression(stmt.expression, depth));
-    for s in stmt.statements {
+    /*for s in stmt.statements {
         buffer.push_str(&parse_tree_statement(s, depth + 1));
-    }
+    }*/
     buffer
 }
 pub fn parse_tree_expression(expr: Expression, depth: usize) -> String {
@@ -262,6 +307,7 @@ pub fn parse_tree_factor(factor: Factor, depth: usize) -> String {
     let mut buffer = String::new();
     push_indent(&mut buffer, depth);
     buffer.push_str("Factor: ");
+    /*
     if factor.kind == FactorKind::Identifier {
         buffer.push_str("Identifier\n");
         push_indent(&mut buffer, depth);
@@ -290,5 +336,6 @@ pub fn parse_tree_factor(factor: Factor, depth: usize) -> String {
         buffer.push_str("Expression\n");
         buffer.push_str(&parse_tree_expression(factor.expression.unwrap(), depth + 1));
     }
+    */
     buffer
 }

@@ -1,575 +1,160 @@
 use super::{
     UserDefinedFunction,
     FactorKind,
-    Factor,
-    Expression,
-    Statement,
+
     ScopeType,
     IdentifierStorage,
     Context,
     ExecResult,
     ExecReturn,
+
+    Interpreter,
+    Value,
+    EvalResult,
+    EvalReturn,
 };
 
+use super::parser;
 use super::builtin;
 use super::define;
 
 use std::collections::HashMap;
 
-pub fn eval_factor(ctx: &mut Context, factor: &Factor) -> Result<Vec<Factor>, String> {
-    let mut factors = Vec::new();
-    if factor.kind == FactorKind::Expression {
-        match eval(ctx, factor.expression.as_ref().unwrap()) {
-            Ok(er) => {
-                factors = er;
-            },
-            Err(e) => {
-                return Err(e)
-            },
-        }
-    } else {
-        factors.push(factor.clone());
-    }
-    Ok(factors)
+#[derive(Debug, Clone)]
+pub struct Expression {
+    pub values: Vec<Value>,
 }
 
-pub fn eval(ctx: &mut Context, expr: &Expression) -> Result<Vec<Factor>, String> {
-    if expr.factors.len() == 0 {
-        return Ok(Vec::new())
-    }
-    let mut func = &expr.factors[0];
-    let mut factors = Vec::new();
-    if func.kind == FactorKind::Expression {
-        match eval(ctx, func.expression.as_ref().unwrap()) {
-            Ok(er) => {
-                for f in er {
-                    factors.push(f);
-                }
-            },
-            Err(e) => {
-                return Err(e)
-            },
+impl Interpreter {
+    pub fn dereference_value(&self, value: &Value) -> Result<Value, String> {
+        if value.is_reference() {
+            Ok(self.context.get_value_from_identifier_id(value.identifier_id.unwrap()).clone())
+        } else {
+            Err("Invalid dereference".to_owned())
         }
-        if factors.len() == 0 {
-            for n in 1..expr.factors.len() {
-                factors.push(expr.factors[n].clone());
-            }
-            return Ok(factors)
+    }
+    pub fn parser_expr_to_run_expr(&self, expr: &parser::Expression) -> Expression {
+        let factors = &expr.factors;
+        let mut expression = Expression { values: Vec::new() };
+        for f in factors {
+            expression.values.push(self.factor_to_value(&f));
         }
-    } else if func.kind != FactorKind::Identifier {
-        return Ok(expr.factors.clone())
-    } else {
-        factors.push(func.clone());
-    }
-    for n in 1..expr.factors.len() {
-        factors.push(expr.factors[n].clone());
-    }
-    if factors.len() == 0 {
-        return Ok(factors)
-    }
-    func = &factors[0];
-    if func.kind != FactorKind::Identifier {
-        return Ok(factors)
+        expression
     }
 
-    match ctx.search_identifier(func.name.as_ref().unwrap()) {
-        Some(iv) => {
-            if iv.1.kind != FactorKind::Function {
-                return Ok(factors.clone())
-            }
-            match iv.1.function {
-                Some(f) => {
-                    return f(ctx, factors.clone())
-                },
-                None => match &iv.1.user_defined_function {
-                    Some(udf) => {
-                        let user_defined_function = udf.clone();
-                        let backup_scope = ctx.scope.clone();
-                        let mut args = Vec::new();
-                        for n in 1..factors.len() {
-                            match eval_factor(ctx, &factors[n]) {
-                                Ok(fs) => args.extend_from_slice(&fs),
-                                Err(e) => return Err(e),
-                            }
-                        }
-                        ctx.scope = user_defined_function.scope;
-                        let res = exec(ctx, &user_defined_function.statement, &args, Some(ScopeType::UserDefinedFunction));
-                        ctx.scope = backup_scope;
-                        match res {
-                            Ok(execreturn) => return Ok(execreturn.factors),
-                            Err(e) => return Err(e),
-                        }
-                    },
-                    None => {
-                        return Err("Identifier is not function".to_owned())
-                    },
-                },
-            }
-        },
-        None => {
-            return Ok(factors.clone())
-        },
-    };
-}
-
-pub fn exec(ctx: &mut Context, statement: &Statement, arguments: &[Factor], scope_type: Option<ScopeType>) -> Result<ExecReturn, String> {
-    let mut is_loop = false;
-    let mut scope_type_set = ScopeType::Block;
-    if scope_type.is_some() {
-        scope_type_set = scope_type.unwrap();
-    }
-    'root: loop {
-        let mut res;
-        match eval(ctx, &statement.expression) {
-            Ok(er) => {
-                res = er;
-            },
-            Err(e) => {
-                return Err(e)
-            },
-        }
-        // User Defined Function Definition
-        if 2 <= res.len() &&
-            res[0].kind == FactorKind::Identifier &&
-                res[0].name.as_ref().unwrap() == define::FUNCTION_DEFINITION {
-            let mut second_factor = res[1].clone();
-            if second_factor.kind == FactorKind::Expression {
-                match eval(ctx, second_factor.expression.as_ref().unwrap()) {
-                    Ok(er) => {
-                        if er.len() != 1 {
-                            return Err("Function definition error".to_owned())
-                        }
-                        second_factor = er[0].clone();
-                    },
-                    Err(e) => {
-                        return Err(e)
-                    },
-                }
-            }
-            if second_factor.kind != FactorKind::Identifier {
-                return Err("lval must be identifier".to_owned())
-            }
-            let second_factor_name = second_factor.name.as_ref().unwrap();
-            let current_scope = ctx.current_scope();
-            if ctx.identifier_storage[current_scope].contains_key(second_factor_name) {
-                return Err(define::REDEFINITION_NOT_SUPPORTED.to_owned())
-            }
-            let mut iv = Factor::new();
-            iv.kind = FactorKind::Function;
-            let mut params = Vec::new();
-            if 2 < res.len() {
-                if res[2].kind == FactorKind::Expression {
-                    params = res[2].expression.as_ref().unwrap().factors.clone();
-                }
-            }
-            iv.user_defined_function = Some(
-                UserDefinedFunction {
-                    scope: ctx.scope.clone(),
-                    statement: Statement {
-                        expression: Expression { factors: Vec::new() },
-                        statements: statement.statements.clone(),
-                        params: params,
-                    }
-                }
-            );
-            ctx.identifier_storage[current_scope].insert(
-                second_factor_name.clone(),
-                iv
-            );
-            return Ok(ExecReturn{
-                result: ExecResult::UserDefinedFunctionDefinition,
-                factors: vec![second_factor]
+    pub fn eval_value(&mut self, value: &Value) -> Result<EvalReturn, String> {
+        if let Ok(v) = self.dereference_value(value) {
+            self.eval_value(&v)
+        } else if let Some(expr) = &value.expression {
+            self.eval(&expr)
+        } else if let Some(block) = &value.block {
+            self.exec_block(&block)
+        } else {
+            Ok(EvalReturn {
+                result: EvalResult::Normal,
+                values: vec![value.clone()],
             })
-        // if / loop statement
-        } else if res.len() == 2 &&
-            res[0].kind == FactorKind::Identifier &&
-                (res[0].name.as_ref().unwrap() == define::IF ||
-                res[0].name.as_ref().unwrap() == define::LOOP) {
-            let if_loop_str = res[0].name.as_ref().unwrap();
-            let mut second_factor = res[1].clone();
-            if second_factor.kind == FactorKind::Expression {
-                match eval(ctx, second_factor.expression.as_ref().unwrap()) {
-                    Ok(er) => {
-                        if er.len() != 1 {
-                            return Err("Target value must be only one".to_owned())
-                        }
-                        second_factor = er[0].clone();
-                    },
-                    Err(e) => {
-                        return Err(e)
-                    },
-                }
-            }
-            if second_factor.kind == FactorKind::Identifier {
-                match ctx.search_identifier(second_factor.name.as_ref().unwrap()) {
-                    Some(iv) => {
-                        second_factor = iv.1.clone();
-                    },
-                    None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
-                }
-            }
-            if second_factor.kind == FactorKind::Bool {
-                if second_factor.bool.unwrap() {
-                    scope_type_set = ScopeType::If;
-                    if if_loop_str == define::LOOP {
-                        is_loop = true;
-                        scope_type_set = ScopeType::Loop;
-                    }
-                } else {
-                    if if_loop_str == define::LOOP {
-                        return Ok(ExecReturn {
-                            result: ExecResult::LoopFalse,
-                            factors: Vec::new(),
-                        })
-                    } else {
-                        return Ok(ExecReturn {
-                            result: ExecResult::IfFalse,
-                            factors: Vec::new(),
-                        })
-                    }
-                }
-            } else if second_factor.kind == FactorKind::Identifier {
-                let second_factor_name = second_factor.name.as_ref().unwrap();
-                match ctx.search_identifier(second_factor_name) {
-                    Some(iv) => {
-                        if iv.1.kind != FactorKind::Bool {
-                            return Err("Target value is not bool".to_owned())
-                        }
-                        if iv.1.bool.unwrap() {
-                            if if_loop_str == define::LOOP {
-                                is_loop = true;
-                            }
-                        } else {
-                            if if_loop_str == define::LOOP {
-                                return Ok(ExecReturn {
-                                    result: ExecResult::LoopFalse,
-                                    factors: Vec::new(),
-                                })
-                            } else {
-                                return Ok(ExecReturn {
-                                    result: ExecResult::IfFalse,
-                                    factors: Vec::new(),
-                                })
-                            }
-                        }
-                    },
-                    None => return Err(define::IDENTIFIER_NOT_DEFINED.to_owned()),
-                }
-            } else {
-                return Err("Target value is not bool".to_owned())
-            }
-        }
-
-        // Normal Statement
-        // Execute statements
-        if 0 < statement.statements.len() {
-            ctx.push_new(scope_type_set.clone());
-            // Arguments
-            let mut params = Vec::new();
-            for param in &statement.params {
-                match eval_factor(ctx, &param) {
-                    Ok(p) => params.extend_from_slice(&p),
-                    Err(e) => {
-                        ctx.pop();
-                        return Err(e)
-                    },
-                }
-            }
-            if arguments.len() != params.len() {
-                ctx.pop();
-                return Err(define::ARGUMENT_LENGTH_MISMATCH.to_owned())
-            }
-            for n in 0..arguments.len() {
-                match builtin::assign_variable(ctx, &params[n], &arguments[n]) {
-                    Ok(_) => {},
-                    Err(e) => {
-                        ctx.pop();
-                        return Err(e)
-                    }
-                }
-            }
-            for s in &statement.statements {
-                match exec(ctx, s, &Vec::new(), None) {
-                    Ok(er) => {
-                        if er.result == ExecResult::Return {
-                            if ctx.scope_type[ctx.scope_type.len() - 1] == ScopeType::UserDefinedFunction {
-                                ctx.pop();
-                                return Ok(ExecReturn {
-                                    result: ExecResult::Normal,
-                                    factors: er.factors,
-                                })
-                            } else {
-                                ctx.pop();
-                                return Ok(ExecReturn {
-                                    result: ExecResult::Return,
-                                    factors: er.factors,
-                                })
-                            }
-                        } else if er.result == ExecResult::LoopBreak {
-                             if ctx.scope_type[ctx.scope_type.len() - 1] == ScopeType::Loop {
-                                ctx.pop();
-                                return Ok(ExecReturn {
-                                    result: ExecResult::Normal,
-                                    factors: er.factors,
-                                })
-                            } else {
-                                ctx.pop();
-                                return Ok(ExecReturn {
-                                    result: ExecResult::LoopBreak,
-                                    factors: er.factors,
-                                })
-                            }
-                        } else if er.result == ExecResult::LoopContinue {
-                             if ctx.scope_type[ctx.scope_type.len() - 1] == ScopeType::Loop {
-                                ctx.pop();
-                                continue 'root;
-                            } else {
-                                ctx.pop();
-                                return Ok(ExecReturn {
-                                    result: ExecResult::LoopContinue,
-                                    factors: er.factors,
-                                })
-                            }
-                        }
-                        if 0 < er.factors.len() && er.factors[0].kind == FactorKind::Identifier {
-                            let first_factor = &er.factors[0];
-                            if first_factor.name.as_ref().unwrap() == define::RETURN {
-                                if !ctx.scope_type.contains(&ScopeType::UserDefinedFunction) {
-                                    ctx.pop();
-                                    return Err("return outside function".to_owned())
-                                }
-                                let mut ret = Vec::new();
-                                for n in 1..er.factors.len() {
-                                    if er.factors[n].kind == FactorKind::Expression {
-                                        match eval(ctx, er.factors[n].expression.as_ref().unwrap()) {
-                                            Ok(er2) => {
-                                                for f in er2 {
-                                                    ret.push(f);
-                                                }
-                                            },
-                                            Err(e) => {
-                                                ctx.pop();
-                                                return Err(e)
-                                            }
-                                        }
-                                    } else {
-                                        ret.push(er.factors[n].clone());
-                                    }
-                                }
-                                ctx.pop();
-                                return Ok(ExecReturn {
-                                    result: ExecResult::Return,
-                                    factors: ret,
-                                })
-                            } else if first_factor.name.as_ref().unwrap() == define::BREAK {
-                                ctx.pop();
-                                return Ok(ExecReturn {
-                                    result: ExecResult::LoopBreak,
-                                    factors: Vec::new(),
-                                });
-                            } else if first_factor.name.as_ref().unwrap() == define::CONTINUE {
-                                if ctx.scope_type[ctx.scope_type.len() - 1] == ScopeType::Loop {
-                                    ctx.pop();
-                                    continue 'root;
-                                } else {
-                                    ctx.pop();
-                                    return Ok(ExecReturn {
-                                        result: ExecResult::LoopContinue,
-                                        factors: Vec::new(),
-                                    })
-                                }
-                            }
-                        }
-                        res = er.factors;
-                    },
-                    Err(e) => {
-                        ctx.pop();
-                        return Err(e)
-                    }
-                }
-            }
-            ctx.pop();
-        }
-        if !is_loop {
-            return Ok(ExecReturn {
-                result: ExecResult::Normal,
-                factors: res,
-            });
         }
     }
-}
+    pub fn eval(&mut self, expr: &Expression) -> Result<EvalReturn, String> {
+        let mut values = Vec::new();
+        if expr.values.len() == 0 {
+            return Ok(
+                EvalReturn {
+                    result: EvalResult::Normal,
+                    values: values,
+                }
+            )
+        }
+        let first_value = &expr.values[0];
+        match self.eval_value(first_value) {
+            Ok(res) => values = res.values,
+            Err(e) => return Err(e),
+        }
+        if values.len() == 0 {
+            return Ok(
+                EvalReturn {
+                    result: EvalResult::Normal,
+                    values: values,
+                }
+            )
+        }
 
-pub fn run(ctx: &mut Context, program: Vec<Statement>) -> Result<(), String> {
-    for s in program {
-        match exec(ctx, &s, &Vec::new(), None) {
-            Ok(_) => {},
-            Err(e) => {
-                return Err(e)
-            },
+        if let Some(func) = values[0].function {
+            for v in &expr.values[1..] {
+                values.push(v.clone())
+            }
+
+            func(self, &values)
+        } else if let Some(udf) = values[0].user_defined_function.clone() {
+            let mut args = Vec::new();
+            for v in &expr.values[1..] {
+                args.push(v.clone())
+            }
+
+            let backup_scope = self.context.scope.clone();
+            self.context.scope = udf.scope.clone();
+            self.context.push_new(ScopeType::UserDefinedFunction);
+            let mut args_lhs = Value::new();
+            args_lhs.expression = Some(udf.args);
+            let mut args_rhs = Value::new();
+            args_rhs.expression = Some(Expression { values: args });
+            match self.assign_variable(&args_lhs, &args_rhs, false) {
+                Ok(_) => {},
+                Err(e) => return Err(e),
+            }
+            let res = self.exec_block(&udf.block);
+            self.context.pop();
+            self.context.scope = backup_scope;
+            return res
+        } else {
+            for v in &expr.values[1..] {
+                match self.eval_value(v) {
+                    Ok(r) => {
+                        for i in r.values {
+                            values.push(i);
+                        }
+                    },
+                    Err(e) => return Err(e),
+                }
+            }
+
+            return Ok(
+                EvalReturn {
+                    result: EvalResult::Normal,
+                    values: values,
+                }
+            )
         }
     }
-    Ok(())
-}
 
-pub fn init_identifier_storage() -> IdentifierStorage {
-    let mut is = Vec::new();
-    let mut scope0 = HashMap::new();
 
-    let mut iv_import = Factor::new();
-    iv_import.kind = FactorKind::Function;
-    iv_import.function = Some(builtin::import);
-    scope0.insert(
-        define::IMPORT.to_owned(),
-        iv_import,
-    );
+    pub fn exec(&mut self, statement: &parser::Statement) -> Result<EvalReturn, String> {
+        let expression = self.parser_expr_to_run_expr(&statement.expression);
+        self.eval(&expression)
+    }
+    pub fn exec_block(&mut self, block: &parser::Block) -> Result<EvalReturn, String> {
+        self.run(&block.program)
+    }
 
-    let mut iv_decas = Factor::new();
-    iv_decas.kind = FactorKind::Function;
-    iv_decas.function = Some(builtin::define);
-    scope0.insert(
-        define::DECAS_ALIAS.to_owned(),
-        iv_decas.clone(),
-    );
-    scope0.insert(
-        define::DECAS.to_owned(),
-        iv_decas.clone(),
-    );
-    let mut iv_assign = Factor::new();
-    iv_assign.kind = FactorKind::Function;
-    iv_assign.function = Some(builtin::assign);
-    scope0.insert(
-        define::ASSIGN.to_owned(),
-        iv_assign,
-    );
-
-    let mut iv_print = Factor::new();
-    iv_print.kind = FactorKind::Function;
-    iv_print.function = Some(builtin::print);
-    scope0.insert(
-        define::PRINT.to_owned(),
-        iv_print.clone(),
-    );
-    scope0.insert(
-        define::PRINTLN.to_owned(),
-        iv_print.clone(),
-    );
-    let mut iv_value = Factor::new();
-    iv_value.kind = FactorKind::Function;
-    iv_value.function = Some(builtin::value);
-    scope0.insert(
-        define::VALUE.to_owned(),
-        iv_value,
-    );
-
-    let mut iv_make_vector = Factor::new();
-    iv_make_vector.kind = FactorKind::Function;
-    iv_make_vector.function = Some(builtin::make_vector);
-    scope0.insert(
-        define::MAKE_VECTOR.to_owned(),
-        iv_make_vector,
-    );
-
-   let mut iv_as = Factor::new();
-    iv_as.kind = FactorKind::Function;
-    iv_as.function = Some(builtin::as_cast);
-    scope0.insert(
-        define::AS.to_owned(),
-        iv_as,
-    );
-
-    let mut iv_arithmetic = Factor::new();
-    iv_arithmetic.kind = FactorKind::Function;
-    iv_arithmetic.function = Some(builtin::arithmetic);
-    scope0.insert(
-        define::ADD.to_owned(),
-        iv_arithmetic.clone(),
-    );
-    scope0.insert(
-        define::SUB.to_owned(),
-        iv_arithmetic.clone(),
-    );
-    scope0.insert(
-        define::MUL.to_owned(),
-        iv_arithmetic.clone(),
-    );
-    scope0.insert(
-        define::DIV.to_owned(),
-        iv_arithmetic.clone(),
-    );
-    scope0.insert(
-        define::REM.to_owned(),
-        iv_arithmetic.clone(),
-    );
-
-    let mut iv_equal = Factor::new();
-    iv_equal.kind = FactorKind::Function;
-    iv_equal.function = Some(builtin::equal);
-    scope0.insert(
-        define::EQUAL.to_owned(),
-        iv_equal,
-    );
-
-    let mut iv_string = Factor::new();
-    iv_string.kind = FactorKind::TypeName;
-    iv_string.string = Some(define::STRING.to_owned());
-    scope0.insert(
-        define::STRING.to_owned(),
-        iv_string,
-    );
-    let mut iv_int = Factor::new();
-    iv_int.kind = FactorKind::TypeName;
-    iv_int.string = Some(define::INT.to_owned());
-    scope0.insert(
-        define::INT.to_owned(),
-        iv_int,
-    );
-    let mut iv_float = Factor::new();
-    iv_float.kind = FactorKind::TypeName;
-    iv_float.string = Some(define::FLOAT.to_owned());
-    scope0.insert(
-        define::FLOAT.to_owned(),
-        iv_float,
-    );
-    let mut iv_bool = Factor::new();
-    iv_bool.kind = FactorKind::TypeName;
-    iv_bool.string = Some(define::BOOL.to_owned());
-    scope0.insert(
-        define::BOOL.to_owned(),
-        iv_bool,
-    );
-    let mut iv_function = Factor::new();
-    iv_function.kind = FactorKind::TypeName;
-    iv_function.string = Some(define::FUNCTION.to_owned());
-    scope0.insert(
-        define::FUNCTION.to_owned(),
-        iv_function,
-    );
-
-    let mut iv_true = Factor::new();
-    iv_true.kind = FactorKind::Bool;
-    iv_true.bool = Some(true);
-    scope0.insert(
-        define::TRUE.to_owned(),
-        iv_true,
-    );
-    let mut iv_false = Factor::new();
-    iv_false.kind = FactorKind::Bool;
-    iv_false.bool = Some(false);
-    scope0.insert(
-        define::FALSE.to_owned(),
-        iv_false,
-    );
-
-    is.push(scope0);
-    is
-}
-pub fn init_context() -> Context {
-    let is = init_identifier_storage();
-    let mut ctx = Context {
-        scope_type: vec![ScopeType::Root],
-        scope: vec![0],
-        identifier_storage: is,
-    };
-    ctx.push_new(ScopeType::Program);
-    ctx
+    pub fn run(&mut self, program: &parser::Program) -> Result<EvalReturn, String> {
+        let mut result = EvalReturn {
+            result: EvalResult::Normal,
+            values: Vec::new(),
+        };
+        for s in &program.statements {
+            match self.exec(&s) {
+                Ok(r) => {
+                    result = r;
+                    if result.result == EvalResult::Return || result.result == EvalResult::Break {
+                        break;
+                    }
+                },
+                Err(e) => {
+                    return Err(e)
+                },
+            }
+        }
+        Ok(result)
+    }
 }

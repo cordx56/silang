@@ -1,3 +1,4 @@
+pub static VERSION: &str = "0.2.1-beta";
 // Special
 pub static EXPRESSION_OPEN: &str = "(";
 pub static EXPRESSION_CLOSE: &str = ")";
@@ -15,6 +16,7 @@ pub static BOOL: &str = "bool";
 pub static VECTOR: &str = "vector";
 pub static MAP: &str = "map";
 pub static FUNCTION: &str = "function";
+pub static VOID: &str = "void";
 
 // Variables
 pub static TRUE: &str = "true";
@@ -23,10 +25,12 @@ pub static FALSE: &str = "false";
 
 // Functions
 pub static IMPORT: &str = "import";
+pub static LAMBDA: &str = "lambda";
 pub static DECAS: &str = "decas";
 pub static DECAS_ALIAS: &str = "::";
 pub static FUNCTION_DEFINITION: &str = "f:";
 pub static ASSIGN: &str = "=";
+pub static ASSIGN_DEFER: &str = "defer=";
 pub static RETURN: &str = "return";
 pub static BREAK: &str = "break";
 pub static CONTINUE: &str = "continue";

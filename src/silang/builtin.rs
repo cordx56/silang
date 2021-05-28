@@ -1,3 +1,8 @@
+pub mod define;
+pub mod function;
+pub mod print;
+
+/*
 use super::{
     FactorKind,
     Factor,
@@ -931,3 +936,4 @@ pub fn equal(ctx: &mut Context, factors: Vec<Factor>) -> Result<Vec<Factor>, Str
     factor_true.bool = Some(true);
     Ok(vec![factor_true])
 }
+*/

@@ -13,11 +13,9 @@ use clap::{
     App,
 };
 
-static VERSION: &str = "0.2.0-beta";
-
 fn main() {
     let matches = App::new("SILang Interpreter")
-        .version(VERSION)
+        .version(silang::define::VERSION)
         .author("Kaoru Chisen <cordx56@cordx.net>")
         .about("Run SILang code")
         .arg(Arg::with_name("FILE")
@@ -28,7 +26,7 @@ fn main() {
              .takes_value(false))
         .get_matches();
 
-    let mut ctx = silang::run::init_context();
+    let mut interpreter = silang::Interpreter::new();
 
     let mut buffer = String::new();
     match matches.value_of("FILE") {
@@ -56,9 +54,9 @@ fn main() {
             match parse_result {
                 Ok(program) => {
                     if matches.is_present("parseTree") {
-                        println!("{}", silang::parser::parse_tree(program.1));
+                        //println!("{}", silang::parser::parse_tree(program.1));
                     } else {
-                        match silang::run::run(&mut ctx, program.1) {
+                        match interpreter.run(&program.1) {
                             Ok(_) => {},
                             Err(e) => eprintln!("{}", e),
                         }
@@ -71,7 +69,7 @@ fn main() {
             }
         },
         None => {
-            println!("SILang Interpreter Ver:{}", VERSION);
+            println!("SILang Interpreter Ver:{}", silang::define::VERSION);
             loop {
                 if 0 < buffer.len() {
                     print!(". ");
@@ -88,10 +86,10 @@ fn main() {
                         if matches.is_present("parseTree") {
                             println!("{}", silang::parser::parse_tree_statement(s.1, 0));
                         } else {
-                            match silang::run::exec(&mut ctx, &s.1, &Vec::new(), None) {
+                            match interpreter.exec(&s.1) {
                                 Ok(fs) => {
-                                    for f in fs.factors {
-                                        silang::builtin::print_factor(&mut ctx, f).ok();
+                                    for f in fs.values {
+                                        //silang::builtin::print_factor(&mut ctx, f).ok();
                                         print!(" ");
                                     }
                                     println!("");
