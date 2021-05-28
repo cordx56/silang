@@ -20,8 +20,9 @@ $ cargo run file.sil
 ## 言語仕様
 ### BNF
 ```
-Program := Statement*
-Statement := Expression "\n" | Expression? "{" Statement* "}"
-Expression := Factor (Whitespace+ Factor)*
-Factor := String | Number | Identifier ("[" Expression "]")? | "(" Expression ")"
+<program>    := (<multispace>* <statement> <multispace>*)*
+<block>      := "{" <multispace>* <program> <multispace>* "}"
+<statement>  := <multispace>* expression <space>* "\n"
+<expression> := <factor> (<space>+ <factor>)*
+<factor>     := <string> | <number> | <identifier> ("[" <expression> "]")? | "(" <multispace>* <expression>? <multispace>* ")" | <block>
 ```
