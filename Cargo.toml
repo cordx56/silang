@@ -1,6 +1,6 @@
 [package]
 name = "silang"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Kaoru Chisen <cordx56@cordx.net>"]
 edition = "2018"
 
