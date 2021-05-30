@@ -55,11 +55,11 @@ impl Interpreter {
             }
             let mut val = Value::new();
             let identifier = v.identifier.as_ref().unwrap();
-            if self.context.is_declared(current_scope, identifier) {
+            if self.context.is_declared(current_scope.scope_number, identifier) {
                 return Err(format!("decas: {} is already declared", identifier))
             }
             val.sil_type = v.sil_type.clone();
-            val.identifier_id = Some(self.context.store_identifier(current_scope, identifier, v.clone()));
+            val.identifier_id = Some(self.context.store_identifier(current_scope.scope_number, identifier, v.clone()));
             //eprintln!("Declare {} as {:?}", identifier, val);
             retval.push(val);
         }
@@ -169,7 +169,7 @@ impl Interpreter {
                     return Err("assign: LHS must be identifier".to_owned())
                 }
                 let current_scope = self.context.current_scope();
-                let id = self.context.store_identifier(current_scope, lhs_values[i].identifier.as_ref().unwrap(), rhs.clone());
+                let id = self.context.store_identifier(current_scope.scope_number, lhs_values[i].identifier.as_ref().unwrap(), rhs.clone());
                 let mut value = Value::new();
                 value.identifier_id = Some(id);
                 retval.push(value)

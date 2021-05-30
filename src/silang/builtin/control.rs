@@ -38,39 +38,6 @@ impl Interpreter {
                         Ok(result) => Ok(result),
                         Err(e) => return Err(e),
                     }
-                    /*
-                    if let Some(expr) = &args[2].expression {
-                        match self.eval(&expr, true) {
-                            Ok(result) => Ok(
-                                EvalReturn {
-                                    result: EvalResult::Normal,
-                                    values: result.values,
-                                }
-                            ),
-                            Err(e) => return Err(e),
-                        }
-                    } else if let Some(block) = &args[2].block {
-                        self.context.push_new(ScopeType::If, false);
-                        match self.exec_block(&block) {
-                            Ok(result) => {
-                                self.context.pop();
-                                Ok(
-                                    EvalReturn {
-                                        result: EvalResult::Normal,
-                                        values: result.values,
-                                    }
-                                )
-                            },
-                            Err(e) => return Err(e),
-                        }
-                    } else {
-                        Ok(
-                            EvalReturn {
-                                result: EvalResult::Normal,
-                                values: vec![args[2].clone()],
-                            }
-                        )
-                    }*/
                 } else {
                     if args.len() == 4 {
                         match self.eval_value(&args[3], true) {

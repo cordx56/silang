@@ -158,7 +158,10 @@ impl Interpreter {
             match self.exec(&s) {
                 Ok(r) => {
                     result = r;
-                    if result.result == EvalResult::Return || result.result == EvalResult::Break {
+                    if result.result == EvalResult::Return {
+                        if self.context.current_scope().scope_type == ScopeType::UserDefinedFunction {
+                            result.result = EvalResult::Normal;
+                        }
                         break;
                     }
                 },

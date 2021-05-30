@@ -66,7 +66,7 @@ impl Interpreter {
         storeval.identifier = Some(retval.identifier.as_ref().unwrap().clone());
         storeval.sil_type = storeval.sil_type.clone();
         let current_scope = self.context.current_scope();
-        retval.identifier_id = Some(self.context.store_identifier(current_scope, retval.identifier.as_ref().unwrap(), storeval.clone()));
+        retval.identifier_id = Some(self.context.store_identifier(current_scope.scope_number, retval.identifier.as_ref().unwrap(), storeval.clone()));
         match self.assign_variable(&retval, &storeval, false) {
             Ok(_) => {},
             Err(e) => return Err(e),

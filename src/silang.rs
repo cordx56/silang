@@ -112,20 +112,10 @@ pub enum SILType {
     Any,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum ScopeType {
-    Root,
-    Program,
-    Block,
-    UserDefinedFunction,
-    If,
-    Loop,
-    UnTyped,
-}
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UserDefinedFunction {
-    scope: Vec<usize>,
+    scope: Vec<ScopeInfo>,
     args: run::Expression,
     block: parser::Block,
 }
@@ -192,6 +182,22 @@ impl std::fmt::Debug for Value {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum ScopeType {
+    Root,
+    Program,
+    Block,
+    UserDefinedFunction,
+    If,
+    Loop,
+    UnTyped,
+}
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ScopeInfo {
+    scope_number: usize,
+    scope_type: ScopeType,
+}
+
 pub struct IdentifierStorage {
     pub freed: Vec<IdentifierRefID>,
     pub storage: Vec<Value>,
@@ -199,8 +205,7 @@ pub struct IdentifierStorage {
 pub type IdentifierIndex = Vec<HashMap<String, IdentifierRefID>>;
 
 pub struct Context {
-    pub scope: Vec<usize>,
-    pub scope_type: Vec<ScopeType>,
+    pub scope: Vec<ScopeInfo>,
     pub untyped_scopes: Vec<usize>,
     pub identifier_storage: IdentifierStorage,
     pub identifier_index: IdentifierIndex,
@@ -208,20 +213,23 @@ pub struct Context {
 
 impl Context {
     pub fn push_new(&mut self, scope_type: ScopeType, is_untyped: bool) {
-        self.scope_type.push(scope_type);
-        self.scope.push(self.identifier_index.len());
+        self.scope.push(
+            ScopeInfo {
+                scope_number: self.identifier_index.len(),
+                scope_type: scope_type,
+            }
+        );
         if is_untyped {
             self.untyped_scopes.push(self.identifier_index.len());
         }
         self.identifier_index.push(HashMap::new());
     }
     pub fn pop(&mut self) {
-        self.scope_type.pop();
         self.scope.pop();
         self.identifier_index.pop();
     }
-    pub fn current_scope(&self) -> usize {
-        self.scope[self.scope.len() - 1]
+    pub fn current_scope(&self) -> ScopeInfo {
+        self.scope[self.scope.len() - 1].clone()
     }
     /// Returns scope and reference to Value
     /// # Arguments
@@ -238,7 +246,7 @@ impl Context {
         }
         let mut n = self.scope.len() -1;
         loop {
-            let scope = self.scope[n];
+            let scope = self.scope[n].scope_number;
             if self.identifier_index[scope].contains_key(name) {
                 return Some((scope, self.identifier_index[scope][name]))
             }
@@ -276,7 +284,7 @@ impl Context {
     }
 
     pub fn is_untyped(&self) -> bool {
-        let current_scope = self.current_scope();
+        let current_scope = self.current_scope().scope_number;
         self.untyped_scopes.iter().find(|&&x| x == current_scope).is_some()
     }
 
@@ -287,8 +295,7 @@ impl Context {
             storage: Vec::new(),
         };
         let mut ctx = Context {
-            scope_type: vec![ScopeType::Root],
-            scope: vec![0],
+            scope: vec![ScopeInfo { scope_number: 0, scope_type: ScopeType::Root }],
             untyped_scopes: vec![],
             identifier_storage: is,
             identifier_index: Vec::new(),
@@ -301,6 +308,10 @@ impl Context {
         self.identifier_index.push(HashMap::new());
 
         // Functions
+        let mut import = Value::new();
+        import.identifier = Some(define::IMPORT.to_owned());
+        import.function = Some(Interpreter::import);
+        self.store_identifier(0, define::IMPORT, import);
         let mut lambda = Value::new();
         lambda.identifier = Some(define::LAMBDA.to_owned());
         lambda.function = Some(Interpreter::lambda);
