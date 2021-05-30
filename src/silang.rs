@@ -6,8 +6,8 @@ pub mod define;
 use std::collections::HashMap;
 
 pub struct Interpreter {
-    context: Context,
-    version: &'static str,
+    pub context: Context,
+    pub version: &'static str,
 }
 
 impl Interpreter {
