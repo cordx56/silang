@@ -54,7 +54,7 @@ fn main() {
             match parse_result {
                 Ok(program) => {
                     if matches.is_present("parseTree") {
-                        //println!("{}", silang::parser::parse_tree(program.1));
+                        println!("{}", silang::parser::parse_tree_program(&program.1, 0));
                     } else {
                         match interpreter.run(&program.1) {
                             Ok(_) => {},
@@ -84,12 +84,12 @@ fn main() {
                 match silang::parser::statement_all_consuming(&buffer) {
                     Ok (s) => {
                         if matches.is_present("parseTree") {
-                            println!("{}", silang::parser::parse_tree_statement(s.1, 0));
+                            println!("{}", silang::parser::parse_tree_statement(&s.1, 0));
                         } else {
                             match interpreter.exec(&s.1) {
-                                Ok(fs) => {
-                                    for f in fs.values {
-                                        //silang::builtin::print_factor(&mut ctx, f).ok();
+                                Ok(result) => {
+                                    for v in result.values {
+                                        interpreter.print_value(&v).ok();
                                         print!(" ");
                                     }
                                     println!("");

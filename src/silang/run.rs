@@ -1,24 +1,12 @@
 use super::{
-    UserDefinedFunction,
-    FactorKind,
-
-    ScopeType,
-    IdentifierStorage,
-    Context,
-    ExecResult,
-    ExecReturn,
-
     Interpreter,
     Value,
     EvalResult,
     EvalReturn,
+    ScopeType,
 };
 
 use super::parser;
-use super::builtin;
-use super::define;
-
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Expression {

@@ -71,37 +71,6 @@ pub struct EvalReturn {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum ExecResult {
-    Normal,
-    IfTrue,
-    IfFalse,
-    LoopFalse,
-    LoopBreak,
-    LoopContinue,
-    UserDefinedFunctionDefinition,
-    Return,
-}
-pub struct ExecReturn {
-    pub result: ExecResult,
-    pub values: Vec<Value>,
-}
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum FactorKind {
-    None,
-    Identifier,
-    String,
-    Int,
-    Float,
-    Bool,
-    Function,
-    TypeName,
-    Vector,
-    Map,
-    Expression,
-}
-
-
-#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum SILType {
     String,
     Int,
