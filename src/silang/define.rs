@@ -25,6 +25,7 @@ pub static FALSE: &str = "false";
 
 // Functions
 pub static IMPORT: &str = "import";
+pub static UNTYPED: &str = "untyped";
 pub static LAMBDA: &str = "lambda";
 pub static DECAS: &str = "decas";
 pub static DECAS_ALIAS: &str = "::";

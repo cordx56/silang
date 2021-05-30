@@ -50,7 +50,7 @@ fn main() {
             buffer.push_str("\n");
 
             let parse_result = silang::parser::program_all_consuming(&buffer);
-            // println!("{:?}", parse_result);
+            // eprintln!("{:?}", parse_result);
             match parse_result {
                 Ok(program) => {
                     if matches.is_present("parseTree") {

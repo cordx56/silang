@@ -12,7 +12,7 @@ impl Interpreter {
             match self.eval_value(value, true) {
                 Ok(result) => {
                     if 1 < result.values.len() {
-                        println!("(");
+                        print!("(");
                     }
                     for i in 0..result.values.len() {
                         match self.print_value(&result.values[i]) {
@@ -24,11 +24,11 @@ impl Interpreter {
                             Err(e) => return Err(e),
                         }
                         if i != result.values.len() - 1 {
-                            println!(" ");
+                            print!(" ");
                         }
                     }
                     if 1 < result.values.len() {
-                        println!(")");
+                        print!(")");
                     }
                 },
                 Err(e) => return Err(e),

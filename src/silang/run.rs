@@ -57,7 +57,10 @@ impl Interpreter {
         } else if let Some(expr) = &value.expression {
             self.eval(&expr, dereference)
         } else if let Some(block) = &value.block {
-            self.exec_block(&block)
+            self.context.push_new(ScopeType::Block, false);
+            let result = self.exec_block(&block);
+            self.context.pop();
+            result
         } else {
             Ok(EvalReturn {
                 result: EvalResult::Normal,
@@ -103,7 +106,7 @@ impl Interpreter {
 
             let backup_scope = self.context.scope.clone();
             self.context.scope = udf.scope.clone();
-            self.context.push_new(ScopeType::UserDefinedFunction);
+            self.context.push_new(ScopeType::UserDefinedFunction, false);
             let mut args_lhs = Value::new();
             args_lhs.expression = Some(udf.args);
             let mut args_rhs = Value::new();

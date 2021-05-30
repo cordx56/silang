@@ -201,14 +201,18 @@ pub type IdentifierIndex = Vec<HashMap<String, IdentifierRefID>>;
 pub struct Context {
     pub scope: Vec<usize>,
     pub scope_type: Vec<ScopeType>,
+    pub untyped_scopes: Vec<usize>,
     pub identifier_storage: IdentifierStorage,
     pub identifier_index: IdentifierIndex,
 }
 
 impl Context {
-    pub fn push_new(&mut self, scope_type: ScopeType) {
+    pub fn push_new(&mut self, scope_type: ScopeType, is_untyped: bool) {
         self.scope_type.push(scope_type);
         self.scope.push(self.identifier_index.len());
+        if is_untyped {
+            self.untyped_scopes.push(self.identifier_index.len());
+        }
         self.identifier_index.push(HashMap::new());
     }
     pub fn pop(&mut self) {
@@ -216,7 +220,7 @@ impl Context {
         self.scope.pop();
         self.identifier_index.pop();
     }
-    pub fn current_scope(&mut self) -> usize {
+    pub fn current_scope(&self) -> usize {
         self.scope[self.scope.len() - 1]
     }
     /// Returns scope and reference to Value
@@ -267,9 +271,13 @@ impl Context {
         self.identifier_index[scope].insert(name.to_string(), id);
         id
     }
+    pub fn is_declared(&self, scope: usize, name: &str) -> bool {
+        self.identifier_index[scope].contains_key(name)
+    }
 
     pub fn is_untyped(&self) -> bool {
-        false
+        let current_scope = self.current_scope();
+        self.untyped_scopes.iter().find(|&&x| x == current_scope).is_some()
     }
 
 
@@ -281,11 +289,12 @@ impl Context {
         let mut ctx = Context {
             scope_type: vec![ScopeType::Root],
             scope: vec![0],
+            untyped_scopes: vec![],
             identifier_storage: is,
             identifier_index: Vec::new(),
         };
         ctx.init_identifier_storage();
-        ctx.push_new(ScopeType::Program);
+        ctx.push_new(ScopeType::Program, false);
         ctx
     }
     fn init_identifier_storage(&mut self) {
@@ -296,6 +305,19 @@ impl Context {
         lambda.identifier = Some(define::LAMBDA.to_owned());
         lambda.function = Some(Interpreter::lambda);
         self.store_identifier(0, define::LAMBDA, lambda);
+        let mut return_expr = Value::new();
+        return_expr.identifier = Some(define::RETURN.to_owned());
+        return_expr.function = Some(Interpreter::return_expression);
+        self.store_identifier(0, define::RETURN, return_expr);
+        // control
+        let mut untyped = Value::new();
+        untyped.identifier = Some(define::UNTYPED.to_owned());
+        untyped.function = Some(Interpreter::untyped);
+        self.store_identifier(0, define::UNTYPED, untyped);
+        let mut if_expr = Value::new();
+        if_expr.identifier = Some(define::IF.to_owned());
+        if_expr.function = Some(Interpreter::if_expression);
+        self.store_identifier(0, define::IF, if_expr);
         // Declare
         let mut decas = Value::new();
         decas.identifier = Some(define::DECAS.to_owned());
@@ -305,6 +327,10 @@ impl Context {
         decas_alias.identifier = Some(define::DECAS_ALIAS.to_owned());
         decas_alias.function = Some(Interpreter::decas);
         self.store_identifier(0, define::DECAS_ALIAS, decas_alias);
+        let mut func_def = Value::new();
+        func_def.identifier = Some(define::FUNCTION_DEFINITION.to_owned());
+        func_def.function = Some(Interpreter::define_function);
+        self.store_identifier(0, define::FUNCTION_DEFINITION, func_def);
         // Assign
         let mut assign = Value::new();
         assign.identifier = Some(define::ASSIGN.to_owned());
@@ -323,6 +349,20 @@ impl Context {
         println.identifier = Some(define::PRINTLN.to_owned());
         println.function = Some(Interpreter::println);
         self.store_identifier(0, define::PRINTLN, println);
+        // Arithmetic
+        let mut add = Value::new();
+        add.identifier = Some(define::ADD.to_owned());
+        add.function = Some(Interpreter::add);
+        self.store_identifier(0, define::ADD, add);
+        let mut rem = Value::new();
+        rem.identifier = Some(define::REM.to_owned());
+        rem.function = Some(Interpreter::rem);
+        self.store_identifier(0, define::REM, rem);
+        // Compare
+        let mut equal = Value::new();
+        equal.identifier = Some(define::EQUAL.to_owned());
+        equal.function = Some(Interpreter::equal);
+        self.store_identifier(0, define::EQUAL, equal);
 
 
         // Type name
