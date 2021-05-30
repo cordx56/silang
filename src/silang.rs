@@ -8,6 +8,7 @@ use std::collections::HashMap;
 pub struct Interpreter {
     pub context: Context,
     pub version: &'static str,
+    pub libraries: Vec<libloading::Library>,
 }
 
 impl Interpreter {
@@ -15,6 +16,7 @@ impl Interpreter {
         Interpreter {
             context: Context::new(),
             version: define::VERSION,
+            libraries: Vec::new(),
         }
     }
     pub fn factor_to_value(&self, factor: &parser::Factor) -> Value {

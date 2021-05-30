@@ -35,6 +35,7 @@ impl Interpreter {
                             match lib.get::<libloading::Symbol<unsafe extern fn(&mut Interpreter)>>(b"sil_load_lib") {
                                 Ok(func) => {
                                     func(self);
+                                    self.libraries.push(lib);
                                     continue;
                                 },
                                 Err(_) => return Err(format!("import: Function get error\n        Is lib{}.so proper library file?", module_name_string))
