@@ -194,8 +194,8 @@ pub enum ScopeType {
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ScopeInfo {
-    scope_number: usize,
-    scope_type: ScopeType,
+    pub scope_number: usize,
+    pub scope_type: ScopeType,
 }
 
 pub struct IdentifierStorage {
