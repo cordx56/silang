@@ -62,9 +62,15 @@ fn main() {
                         }
                     }
                 },
-                Err(e) => {
+                Err(error) => {
                     eprintln!("Parse error");
-                    eprintln!("{}", e);
+                    match error {
+                        nom::Err::Error(e) => {
+                            let input: &str = &buffer;
+                            eprintln!("{}", nom::error::convert_error(input, e))
+                        },
+                        _ => {},
+                    }
                 },
             }
         },
