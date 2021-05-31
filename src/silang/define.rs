@@ -1,4 +1,4 @@
-pub static VERSION: &str = "0.2.1-beta";
+pub static VERSION: &str = "0.3.0-beta";
 // Special
 pub static EXPRESSION_OPEN: &str = "(";
 pub static EXPRESSION_CLOSE: &str = ")";
