@@ -1,4 +1,5 @@
-# SILang - Simple Interpreter Language
+# SILang
+SILang - Simple Interpreter Language
 
 大学の講義で作成したインタプリタの改善・拡張版。
 
@@ -6,18 +7,18 @@
 
 言語の試用は[https://silang.cordx.net/](https://silang.cordx.net/)から可能。
 
-## 実行
-インタプリタの実行
+## Run
+Running interpreter
 ```bash
 $ cargo run
 ```
 
-ファイルの実行
+Running file
 ```bash
 $ cargo run file.sil
 ```
 
-## 言語仕様
+## Language specification
 ### BNF
 ```
 <program>    := (<multispace>* <statement> <multispace>*)*
