@@ -2,6 +2,7 @@ pub mod parser;
 pub mod run;
 pub mod builtin;
 pub mod define;
+pub mod preprocessor;
 
 use std::collections::HashMap;
 

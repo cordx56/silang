@@ -49,29 +49,36 @@ fn main() {
             }
             buffer.push_str("\n");
 
-            let parse_result = silang::parser::program_all_consuming(&buffer);
-            // eprintln!("{:?}", parse_result);
-            match parse_result {
-                Ok(program) => {
-                    if matches.is_present("parseTree") {
-                        println!("{}", silang::parser::parse_tree_program(&program.1, 0));
-                    } else {
-                        match interpreter.run(&program.1) {
-                            Ok(_) => {},
-                            Err(e) => eprintln!("{}", e),
-                        }
-                    }
-                },
-                Err(error) => {
-                    eprintln!("Parse error");
-                    match error {
-                        nom::Err::Error(e) => {
-                            let input: &str = &buffer;
-                            eprintln!("{}", nom::error::convert_error(input, e))
+            match silang::preprocessor::preprocess(&buffer) {
+                Ok(source_code) => {
+                    let parse_result = silang::parser::program_all_consuming(&source_code);
+                    // eprintln!("{:?}", parse_result);
+                    match parse_result {
+                        Ok(program) => {
+                            if matches.is_present("parseTree") {
+                                println!("{}", silang::parser::parse_tree_program(&program.1, 0));
+                            } else {
+                                match interpreter.run(&program.1) {
+                                    Ok(_) => {},
+                                    Err(e) => eprintln!("{}", e),
+                                }
+                            }
                         },
-                        _ => {},
+                        Err(error) => {
+                            eprintln!("Parse error");
+                            match error {
+                                nom::Err::Error(e) => {
+                                    let input: &str = &buffer;
+                                    eprintln!("{}", nom::error::convert_error(input, e))
+                                },
+                                _ => {},
+                            }
+                        },
                     }
                 },
+                Err(e) => {
+                    eprintln!("Preprocess error\n{}", e);
+                }
             }
         },
         None => {
