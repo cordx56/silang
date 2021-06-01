@@ -2,8 +2,8 @@ use crate::silang::{
     Interpreter,
     Value,
     SILType,
-    define,
 };
+use crate::define;
 
 impl Interpreter {
     pub fn get_type_from_identifier(&self, identifier: &Value) -> Result<SILType, String> {

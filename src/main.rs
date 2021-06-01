@@ -1,4 +1,9 @@
 mod silang;
+mod parser;
+mod run;
+mod preprocessor;
+mod define;
+mod builtin;
 
 use std::fs;
 use std::io::{
@@ -14,8 +19,10 @@ use clap::{
 };
 
 fn main() {
+    let mut interpreter = silang::Interpreter::new();
+
     let matches = App::new("SILang Interpreter")
-        .version(silang::define::VERSION)
+        .version(interpreter.version)
         .author("Kaoru Chisen <cordx56@cordx.net>")
         .about("Run SILang code")
         .arg(Arg::with_name("FILE")
@@ -25,8 +32,6 @@ fn main() {
              .help("Print parse tree")
              .takes_value(false))
         .get_matches();
-
-    let mut interpreter = silang::Interpreter::new();
 
     let mut buffer = String::new();
     match matches.value_of("FILE") {
@@ -49,14 +54,14 @@ fn main() {
             }
             buffer.push_str("\n");
 
-            match silang::preprocessor::preprocess(&buffer) {
+            match preprocessor::preprocess(&buffer) {
                 Ok(source_code) => {
-                    let parse_result = silang::parser::program_all_consuming(&source_code);
+                    let parse_result = parser::program_all_consuming(&source_code);
                     // eprintln!("{:?}", parse_result);
                     match parse_result {
                         Ok(program) => {
                             if matches.is_present("parseTree") {
-                                println!("{}", silang::parser::parse_tree_program(&program.1, 0));
+                                println!("{}", parser::parse_tree_program(&program.1, 0));
                             } else {
                                 match interpreter.run(&program.1) {
                                     Ok(_) => {},
@@ -82,7 +87,7 @@ fn main() {
             }
         },
         None => {
-            println!("SILang Interpreter Ver:{}", silang::define::VERSION);
+            println!("SILang Interpreter Ver:{}", interpreter.version);
             loop {
                 if 0 < buffer.len() {
                     print!(". ");
@@ -94,10 +99,10 @@ fn main() {
                 if buffer.len() == 0 {
                     break;
                 }
-                match silang::parser::statement_all_consuming(&buffer) {
+                match parser::statement_all_consuming(&buffer) {
                     Ok (s) => {
                         if matches.is_present("parseTree") {
-                            println!("{}", silang::parser::parse_tree_statement(&s.1, 0));
+                            println!("{}", parser::parse_tree_statement(&s.1, 0));
                         } else {
                             match interpreter.exec(&s.1) {
                                 Ok(result) => {

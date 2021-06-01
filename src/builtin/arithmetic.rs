@@ -4,9 +4,8 @@ use crate::silang::{
     EvalReturn,
     EvalResult,
     SILType,
-
-    define,
 };
+use crate::define;
 
 impl Interpreter {
     pub fn add(&mut self, args: &[Value]) -> Result<EvalReturn, String> {

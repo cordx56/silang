@@ -1,8 +1,6 @@
-pub mod parser;
-pub mod run;
-pub mod builtin;
-pub mod define;
-pub mod preprocessor;
+use crate::parser;
+use crate::run;
+use crate::define;
 
 use std::collections::HashMap;
 
@@ -87,9 +85,9 @@ pub enum SILType {
 
 #[derive(Debug, Clone)]
 pub struct UserDefinedFunction {
-    scope: Vec<ScopeInfo>,
-    args: run::Expression,
-    block: parser::Block,
+    pub scope: Vec<ScopeInfo>,
+    pub args: run::Expression,
+    pub block: parser::Block,
 }
 
 pub type IdentifierRefID = usize;

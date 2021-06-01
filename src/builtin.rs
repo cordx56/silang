@@ -10,8 +10,8 @@ use crate::silang::{
     Value,
     EvalReturn,
     EvalResult,
-    parser,
 };
+use crate::parser;
 
 impl Interpreter {
     pub fn import(&mut self, args: &[Value]) -> Result<EvalReturn, String> {
