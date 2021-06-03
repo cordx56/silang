@@ -245,6 +245,12 @@ pub fn number(s: &str) -> IResult<&str, Factor, VerboseError<&str>> {
     )(s)
 }
 pub fn string(s: &str) -> IResult<&str, Factor, VerboseError<&str>> {
+    alt((
+        string_content,
+        string_empty,
+    ))(s)
+}
+pub fn string_content(s: &str) -> IResult<&str, Factor, VerboseError<&str>> {
     map(
         delimited(
             char('"'),
@@ -266,6 +272,17 @@ pub fn string(s: &str) -> IResult<&str, Factor, VerboseError<&str>> {
         ),
         |string: String| -> Factor {
             Factor { identifier: None, string: Some(string), int: None, float: None, expression: None, block: None }
+        }
+    )(s)
+}
+pub fn string_empty(s: &str) -> IResult<&str, Factor, VerboseError<&str>> {
+    map(
+        permutation((
+            char('"'),
+            char('"'),
+        )),
+        |(_, _)| -> Factor {
+            Factor { identifier: None, string: Some("".to_owned()), int: None, float: None, expression: None, block: None }
         }
     )(s)
 }

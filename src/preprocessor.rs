@@ -87,6 +87,12 @@ pub fn comment(s: &str) -> IResult<&str, String, VerboseError<&str>> {
     )(s)
 }
 pub fn string(s: &str) -> IResult<&str, String, VerboseError<&str>> {
+    alt((
+        string_content,
+        string_empty,
+    ))(s)
+}
+pub fn string_content(s: &str) -> IResult<&str, String, VerboseError<&str>> {
     map(
         delimited(
             char('"'),
@@ -98,11 +104,18 @@ pub fn string(s: &str) -> IResult<&str, String, VerboseError<&str>> {
             char('"'),
         ),
         |s: &str| {
-            let mut buffer = String::new();
-            buffer.push('\"');
-            buffer.push_str(s);
-            buffer.push('\"');
-            buffer
+            format!("\"{}\"", s)
+        }
+    )(s)
+}
+pub fn string_empty(s: &str) -> IResult<&str, String, VerboseError<&str>> {
+    map(
+        permutation((
+            char('"'),
+            char('"'),
+        )),
+        |(_, _)| {
+            "\"\"".to_owned()
         }
     )(s)
 }
