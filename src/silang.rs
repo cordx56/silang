@@ -335,6 +335,18 @@ impl Context {
         add.identifier = Some(define::ADD.to_owned());
         add.function = Some(Interpreter::add);
         self.store_identifier(0, define::ADD, add);
+        let mut sub = Value::new();
+        sub.identifier = Some(define::SUB.to_owned());
+        sub.function = Some(Interpreter::sub);
+        self.store_identifier(0, define::SUB, sub);
+        let mut mul = Value::new();
+        mul.identifier = Some(define::MUL.to_owned());
+        mul.function = Some(Interpreter::mul);
+        self.store_identifier(0, define::MUL, mul);
+        let mut div = Value::new();
+        div.identifier = Some(define::DIV.to_owned());
+        div.function = Some(Interpreter::div);
+        self.store_identifier(0, define::DIV, div);
         let mut rem = Value::new();
         rem.identifier = Some(define::REM.to_owned());
         rem.function = Some(Interpreter::rem);

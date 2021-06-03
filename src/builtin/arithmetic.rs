@@ -65,6 +65,168 @@ impl Interpreter {
             Err(format!("add: {}", define::UNSUPPORTED_OPERATION))
         }
     }
+    pub fn sub(&mut self, args: &[Value]) -> Result<EvalReturn, String> {
+        let mut accumulator;
+        let mut values = Vec::new();
+        for value in &args[1..] {
+            match self.eval_value(value, true) {
+                Ok(result) => {
+                    for v in result.values {
+                        values.push(v);
+                    }
+                },
+                Err(e) => return Err(e),
+            }
+        }
+        if values.len() < 2 {
+            return Err("sub: Argument length must be >=2".to_owned())
+        }
+        accumulator = values[0].clone();
+        for value in &values[1..] {
+            match self.sub_value(&accumulator, value) {
+                Ok(v) => accumulator = v,
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(EvalReturn {
+            result: EvalResult::Normal,
+            values: vec![accumulator],
+        })
+    }
+    pub fn sub_value(&self, lhs: &Value, rhs: &Value) -> Result<Value, String> {
+        let mut retval = Value::new();
+        if let Some(lhs_int) = lhs.int {
+            if let Some(rhs_int) = rhs.int {
+                retval.int = Some(lhs_int - rhs_int);
+                Ok(retval)
+            } else if let Some(rhs_float) = rhs.float {
+                retval.float = Some(lhs_int as f64 - rhs_float);
+                Ok(retval)
+            } else {
+                Err(format!("sub: {}", define::UNSUPPORTED_OPERATION))
+            }
+        } else if let Some(lhs_float) = lhs.float {
+            if let Some(rhs_int) = rhs.int {
+                retval.float = Some(lhs_float - rhs_int as f64);
+                Ok(retval)
+            } else if let Some(rhs_float) = rhs.float {
+                retval.float = Some(lhs_float - rhs_float);
+                Ok(retval)
+            } else {
+                Err(format!("sub: {}", define::UNSUPPORTED_OPERATION))
+            }
+        } else {
+            Err(format!("sub: {}", define::UNSUPPORTED_OPERATION))
+        }
+    }
+    pub fn mul(&mut self, args: &[Value]) -> Result<EvalReturn, String> {
+        let mut accumulator;
+        let mut values = Vec::new();
+        for value in &args[1..] {
+            match self.eval_value(value, true) {
+                Ok(result) => {
+                    for v in result.values {
+                        values.push(v);
+                    }
+                },
+                Err(e) => return Err(e),
+            }
+        }
+        if values.len() < 2 {
+            return Err("mul: Argument length must be >=2".to_owned())
+        }
+        accumulator = values[0].clone();
+        for value in &values[1..] {
+            match self.mul_value(&accumulator, value) {
+                Ok(v) => accumulator = v,
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(EvalReturn {
+            result: EvalResult::Normal,
+            values: vec![accumulator],
+        })
+    }
+    pub fn mul_value(&self, lhs: &Value, rhs: &Value) -> Result<Value, String> {
+        let mut retval = Value::new();
+        if let Some(lhs_int) = lhs.int {
+            if let Some(rhs_int) = rhs.int {
+                retval.int = Some(lhs_int * rhs_int);
+                Ok(retval)
+            } else if let Some(rhs_float) = rhs.float {
+                retval.float = Some(lhs_int as f64 * rhs_float);
+                Ok(retval)
+            } else {
+                Err(format!("mul: {}", define::UNSUPPORTED_OPERATION))
+            }
+        } else if let Some(lhs_float) = lhs.float {
+            if let Some(rhs_int) = rhs.int {
+                retval.float = Some(lhs_float * rhs_int as f64);
+                Ok(retval)
+            } else if let Some(rhs_float) = rhs.float {
+                retval.float = Some(lhs_float * rhs_float);
+                Ok(retval)
+            } else {
+                Err(format!("mul: {}", define::UNSUPPORTED_OPERATION))
+            }
+        } else {
+            Err(format!("mul: {}", define::UNSUPPORTED_OPERATION))
+        }
+    }
+    pub fn div(&mut self, args: &[Value]) -> Result<EvalReturn, String> {
+        let mut accumulator;
+        let mut values = Vec::new();
+        for value in &args[1..] {
+            match self.eval_value(value, true) {
+                Ok(result) => {
+                    for v in result.values {
+                        values.push(v);
+                    }
+                },
+                Err(e) => return Err(e),
+            }
+        }
+        if values.len() < 2 {
+            return Err("div: Argument length must be >=2".to_owned())
+        }
+        accumulator = values[0].clone();
+        for value in &values[1..] {
+            match self.div_value(&accumulator, value) {
+                Ok(v) => accumulator = v,
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(EvalReturn {
+            result: EvalResult::Normal,
+            values: vec![accumulator],
+        })
+    }
+    pub fn div_value(&self, lhs: &Value, rhs: &Value) -> Result<Value, String> {
+        let mut retval = Value::new();
+        if let Some(lhs_int) = lhs.int {
+            if let Some(rhs_int) = rhs.int {
+                retval.int = Some(lhs_int / rhs_int);
+                Ok(retval)
+            } else if let Some(rhs_float) = rhs.float {
+                retval.float = Some(lhs_int as f64 / rhs_float);
+                Ok(retval)
+            } else {
+                Err(format!("mul: {}", define::UNSUPPORTED_OPERATION))
+            }
+        } else if let Some(lhs_float) = lhs.float {
+            if let Some(rhs_int) = rhs.int {
+                retval.float = Some(lhs_float / rhs_int as f64);
+                Ok(retval)
+            } else if let Some(rhs_float) = rhs.float {
+                retval.float = Some(lhs_float / rhs_float);
+                Ok(retval)
+            } else {
+                Err(format!("mul: {}", define::UNSUPPORTED_OPERATION))
+            }
+        } else {
+            Err(format!("mul: {}", define::UNSUPPORTED_OPERATION))
+        }
+    }
     pub fn rem(&mut self, args: &[Value]) -> Result<EvalReturn, String> {
         let mut values = Vec::new();
         for value in &args[1..] {
