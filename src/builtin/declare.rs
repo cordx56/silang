@@ -162,14 +162,15 @@ impl Interpreter {
                 value.identifier_id = Some(id);
                 retval.push(value);
             } else {
-                if !self.context.is_untyped() {
-                    return Err("assign: LHS must be declared identifier\n        Hint: You can use untyped function".to_owned())
-                }
                 if lhs_values[i].identifier.is_none() {
                     return Err("assign: LHS must be identifier".to_owned())
                 }
                 let current_scope = self.context.current_scope();
-                let id = self.context.store_identifier(current_scope.scope_number, lhs_values[i].identifier.as_ref().unwrap(), rhs.clone());
+                let mut store_value = rhs.clone();
+                if self.context.is_untyped() {
+                    store_value.sil_type = SILType::Any;
+                }
+                let id = self.context.store_identifier(current_scope.scope_number, lhs_values[i].identifier.as_ref().unwrap(), store_value);
                 let mut value = Value::new();
                 value.identifier_id = Some(id);
                 retval.push(value)
