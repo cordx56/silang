@@ -57,4 +57,33 @@ impl Interpreter {
             Err(e) => return Err(e),
         }
     }
+
+    pub fn loop_expression(&mut self, args: &[Value]) -> Result<EvalReturn, String> {
+        if args.len() != 3 {
+            return Err("loop: Argument length must be 2".to_owned())
+        }
+        let mut retval = EvalReturn {
+            result: EvalResult::Normal,
+            values: vec![],
+        };
+        loop {
+            match self.eval_value(&args[1], true) {
+                Ok(result) => {
+                    if result.values.len() != 1 || result.values[0].bool.is_none() {
+                        return Err("loop: Argument 1 must be single bool value".to_owned())
+                    }
+                    if result.values[0].bool.unwrap() {
+                        match self.eval_value(&args[2], true) {
+                            Ok(result) => retval = result,
+                            Err(e) => return Err(e),
+                        }
+                    } else {
+                        break
+                    }
+                },
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(retval)
+    }
 }

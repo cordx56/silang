@@ -299,6 +299,10 @@ impl Context {
         if_expr.identifier = Some(define::IF.to_owned());
         if_expr.function = Some(Interpreter::if_expression);
         self.store_identifier(0, define::IF, if_expr);
+        let mut loop_expr = Value::new();
+        loop_expr.identifier = Some(define::LOOP.to_owned());
+        loop_expr.function = Some(Interpreter::loop_expression);
+        self.store_identifier(0, define::LOOP, loop_expr);
         // Declare
         let mut decas = Value::new();
         decas.identifier = Some(define::DECAS.to_owned());
