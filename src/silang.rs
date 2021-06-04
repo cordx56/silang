@@ -195,7 +195,14 @@ impl Context {
         self.identifier_index.push(HashMap::new());
     }
     pub fn pop(&mut self) {
-        self.scope.pop();
+        match self.scope.pop() {
+            Some(popped) => {
+                if popped.scope_type == ScopeType::UnTyped {
+                    self.untyped_scopes.pop();
+                }
+            },
+            None => {},
+        }
         self.identifier_index.pop();
     }
     pub fn current_scope(&self) -> ScopeInfo {
