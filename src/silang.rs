@@ -34,6 +34,7 @@ impl Interpreter {
         Interpreter {
             context: Context::new(),
             version: define::VERSION,
+            stdout_buffer: String::new(),
             stdout_func: |interpreter, data| interpreter.stdout_buffer.push_str(data),
         }
     }
