@@ -81,6 +81,10 @@ impl Interpreter {
             }
         )
     }
+    #[cfg(any(target_family = "wasm"))]
+    pub fn import(&mut self, args: &[Value]) -> Result<EvalReturn, String> {
+        Err("import is not supported in wasm".to_owned())
+    }
 }
 
 /*

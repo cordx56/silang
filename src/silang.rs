@@ -17,11 +17,19 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
+    #[cfg(any(target_family = "unix", target_family = "windows"))]
     pub fn new() -> Self {
         Interpreter {
             context: Context::new(),
             version: define::VERSION,
             libraries: Vec::new(),
+        }
+    }
+    #[cfg(target_family = "wasm")]
+    pub fn new() -> Self {
+        Interpreter {
+            context: Context::new(),
+            version: define::VERSION,
         }
     }
     pub fn factor_to_value(&self, factor: &parser::Factor) -> Value {
