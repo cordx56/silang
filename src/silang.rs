@@ -4,10 +4,16 @@ use crate::define;
 
 use std::collections::HashMap;
 
+#[cfg(any(target_family = "unix", target_family = "windows"))]
 pub struct Interpreter {
     pub context: Context,
     pub version: &'static str,
     pub libraries: Vec<libloading::Library>,
+}
+#[cfg(target_family = "wasm")]
+pub struct Interpreter {
+    pub context: Context,
+    pub version: &'static str,
 }
 
 impl Interpreter {

@@ -14,6 +14,7 @@ use crate::silang::{
 use crate::parser;
 
 impl Interpreter {
+    #[cfg(any(target_family = "unix", target_family = "windows"))]
     pub fn import(&mut self, args: &[Value]) -> Result<EvalReturn, String> {
         let mut module_names = Vec::new();
         for arg in &args[1..] {
