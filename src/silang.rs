@@ -9,14 +9,14 @@ pub struct Interpreter {
     pub context: Context,
     pub version: &'static str,
     pub libraries: Vec<libloading::Library>,
-    pub stdout_func: fn (&Interpreter, &str),
+    pub stdout_func: fn (&mut Interpreter, &str),
 }
 #[cfg(target_family = "wasm")]
 pub struct Interpreter {
     pub context: Context,
     pub version: &'static str,
     pub stdout_buffer: String,
-    pub stdout_func: fn (&Interpreter, &str),
+    pub stdout_func: fn (&mut Interpreter, &str),
 }
 
 impl Interpreter {
@@ -44,7 +44,7 @@ impl Interpreter {
     }
 
     #[cfg(target_family = "wasm")]
-    pub fn buffer_flush(&self) -> String {
+    pub fn buffer_flush(&mut self) -> String {
         let tmp = self.stdout_buffer;
         self.stdout_buffer = String::new();
         tmp
