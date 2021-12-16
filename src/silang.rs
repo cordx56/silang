@@ -43,7 +43,7 @@ impl Interpreter {
     }
 
     #[cfg(target_family = "wasm")]
-    pub fn buffer_flush() -> String {
+    pub fn buffer_flush(&self) -> String {
         let tmp = self.stdout_buffer;
         self.stdout_buffer = String::new();
         tmp
