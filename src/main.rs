@@ -87,7 +87,7 @@ fn main() {
             }
         },
         None => {
-            println!("SILang Interpreter Ver:{}", interpreter.version());
+            println!("SILang Interpreter Ver:{}", interpreter.version);
             loop {
                 if 0 < buffer.len() {
                     print!(". ");

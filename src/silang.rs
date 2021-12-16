@@ -39,13 +39,9 @@ impl Interpreter {
         }
     }
 
-    pub fn version(&self) -> &str {
-        self.version
-    }
-
     #[cfg(target_family = "wasm")]
     pub fn buffer_flush(&mut self) -> String {
-        let tmp = self.stdout_buffer;
+        let tmp = self.stdout_buffer.clone();
         self.stdout_buffer = String::new();
         tmp
     }
