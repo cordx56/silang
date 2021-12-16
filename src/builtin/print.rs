@@ -12,7 +12,7 @@ impl Interpreter {
             match self.eval_value(value, true) {
                 Ok(result) => {
                     if 1 < result.values.len() {
-                        print!("(");
+                        (self.stdout_func)(self, "(");
                     }
                     for i in 0..result.values.len() {
                         match self.print_value(&result.values[i]) {
@@ -24,11 +24,11 @@ impl Interpreter {
                             Err(e) => return Err(e),
                         }
                         if i != result.values.len() - 1 {
-                            print!(" ");
+                            (self.stdout_func)(self, " ");
                         }
                     }
                     if 1 < result.values.len() {
-                        print!(")");
+                        (self.stdout_func)(self, ")");
                     }
                 },
                 Err(e) => return Err(e),
@@ -48,19 +48,19 @@ impl Interpreter {
                 Err(e) => return Err(e),
             }
         } else if let Some(string) = &value.string {
-            print!("{}", string);
+            (self.stdout_func)(self, &string);
             retval.push(value.clone());
         } else if let Some(int) = value.int {
-            print!("{}", int);
+            (self.stdout_func)(self, &format!("{}", int));
             retval.push(value.clone());
         } else if let Some(float) = value.float {
-            print!("{}", float);
+            (self.stdout_func)(self, &format!("{}", float));
             retval.push(value.clone());
         } else if let Some(bool_val) = value.bool {
             if bool_val {
-                print!("true");
+                (self.stdout_func)(self, "true");
             } else {
-                print!("false");
+                (self.stdout_func)(self, "false");
             }
             retval.push(value.clone());
         } else {
@@ -99,7 +99,7 @@ impl Interpreter {
                 Err(e) => return Err(e),
             }
         }
-        println!("");
+        (self.stdout_func)(self, "\n");
         Ok(
             EvalReturn {
                 result: EvalResult::Normal,

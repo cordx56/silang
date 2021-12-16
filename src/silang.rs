@@ -9,11 +9,14 @@ pub struct Interpreter {
     pub context: Context,
     pub version: &'static str,
     pub libraries: Vec<libloading::Library>,
+    pub stdout_func: fn (&Interpreter, &str),
 }
 #[cfg(target_family = "wasm")]
 pub struct Interpreter {
     pub context: Context,
     pub version: &'static str,
+    pub stdout_buffer: String,
+    pub stdout_func: fn (&Interpreter, &str),
 }
 
 impl Interpreter {
@@ -23,6 +26,7 @@ impl Interpreter {
             context: Context::new(),
             version: define::VERSION,
             libraries: Vec::new(),
+            stdout_func: |_, data| print!("{}", data),
         }
     }
     #[cfg(target_family = "wasm")]
@@ -30,8 +34,21 @@ impl Interpreter {
         Interpreter {
             context: Context::new(),
             version: define::VERSION,
+            stdout_func: |interpreter, data| interpreter.stdout_buffer.push_str(data),
         }
     }
+
+    pub fn version(&self) -> &str {
+        self.version
+    }
+
+    #[cfg(target_family = "wasm")]
+    pub fn buffer_flush() -> String {
+        let tmp = self.stdout_buffer;
+        self.stdout_buffer = String::new();
+        tmp
+    }
+
     pub fn factor_to_value(&self, factor: &parser::Factor) -> Value {
         let mut value = Value::new();
         if factor.identifier.is_some() {
